@@ -16,9 +16,9 @@
 
 struct EvoParams
 {
-	unsigned long long t_sim = 2600; // 2 minutes
+	unsigned long long t_sim = 3600; // 2 minutes
 	unsigned long long t_exp = 300; // 10 seconds
-	unsigned int population = 20;
+	unsigned int population = 20; // 20
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
 	unsigned short n_evals = 4;
@@ -76,9 +76,13 @@ struct ExecutionXML {
 
 	std::string home = R"(
 	<!-- HOME -->
-	<ReactiveFallback>
-		<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
-	</ReactiveFallback>
+	<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
+	<!---------->
+	)";
+	
+	std::string position = R"(
+	<!-- POSITION -->
+	<Mulav arg0="{vvote}" arg1="{vlift}" arg2="-5.000" arg3="{vprox}"/>
 	<!---------->
 	)";
 	
@@ -323,6 +327,7 @@ enum NodeID
 	EXPLORE,
 	ATTRACT,
 	RECRUIT,
+	POSITION,
 	HOME
 };
 typedef enum NodeID NodeID; 
@@ -391,6 +396,7 @@ std::map<NodeID, GPNode> execution_set
 	{EXPLORE,  {"Explore",  0, 0, {},               ExecutionXML.exploration}},
 	{ATTRACT,  {"Attract",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.attraction }},
 	{RECRUIT,  {"Recruit",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.recruitment}},
+	{POSITION, {"Position", 0, 0, {},               ExecutionXML.position   }},
 	{HOME,     {"Home",     0, 0, {},               ExecutionXML.home       }}
 };
 
@@ -636,6 +642,10 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 		env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
 		env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
 		env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
+		env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
+		env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
+		env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
+		env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
 
 		// Initial exploration
 		GPTree exp_tree;
@@ -910,6 +920,7 @@ void SO_report_generation(
 		<< "Best = " << last_generation.best_total_cost << "\n"
 		<< "Average = " << last_generation.average_cost << "\n"
 		<< "Exe time = " << last_generation.exe_time << "\n"
+		<< "Best size = " << best_genes.tree.size() << "\n"
 		<< "--------------------------------------------------\n"
 		<< printTree(best_genes, "MainTree") << "\n";
 }
@@ -955,7 +966,7 @@ int main(int argc, char* argv[])
 	std::time_t current_time = std::chrono::system_clock::to_time_t(current);
 	output_file << "**************************************************\n"
 	            << std::ctime(&current_time) << "\n"
-	            << "Number of robots: " << "12\n"
+	            << "Number of robots: " << "16\n"
 	            << "Number of loads: " << "3, 2-porters\n"
 	            << "Population: " << EvoParams.population << "\n"
 	            << "Generations: " << ga_obj.generation_max << "\n"

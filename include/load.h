@@ -16,6 +16,7 @@ class Load : public SimObject
 		unsigned long long t_life;
 		unsigned long long t_cover;
 		bool lifted;
+		bool lowered;
 
 	private:
 		unsigned short p_porters;

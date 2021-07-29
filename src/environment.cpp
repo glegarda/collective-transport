@@ -113,24 +113,28 @@ float Environment::run(unsigned long long duration)
 	// Update fitness
 	for (const auto& load : p_loads)
 	{
+		// Displacement
+		float x_init = load->getStartPosition().x;
+		float x_final = load->getBody()->GetPosition().x;
+		float t_life_si = static_cast<float>(load->t_life) / p_f_sim;
+		p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
+
+		// Penalise never being lifted
+		if (!load->lifted)
+		{
+			p_fitness -= 1.0f;
+		}
+
+		// Reward begin lowered
+		if (load->lowered)
+		{
+			p_fitness += 1.0f;
+		}
+
 		// Lifting point coverage
 		float t_coverf = static_cast<float>(load->t_cover);
 		float norm_t_coverf = t_coverf / load->getPorters();
 		p_fitness += norm_t_coverf / load->t_life;
-
-		if (load->lifted)
-		{
-			// Displacement
-			float x_init = load->getStartPosition().x;
-			float x_final = load->getBody()->GetPosition().x;
-			float t_life_si = static_cast<float>(load->t_life) / p_f_sim;
-			p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
-		}
-		else
-		{
-			// Penalise never being lifted
-			p_fitness -= 1;
-		}
 	}
 
 	if (render)
@@ -485,6 +489,15 @@ void Environment::act()
 				unsigned short tmp_id = robot->detachLoad(p_world);
 				robot->platform_up = false;
 
+				for (auto& load : p_loads)
+				{
+					if (load->getBodyData().id == tmp_id)
+					{
+						load->lowered = true;
+						break;
+					}
+				}
+
 				// If any of the robots are at the nest, add load to list
 				if (robot->scene.rb_nest.r > 0.0f &&
 				    robot->scene.rb_nest.r < g_ac.nest_r)
@@ -515,12 +528,7 @@ void Environment::act()
 						robot->attachLoad(p_world, load.get());
 						robot->platform_up = true;
 
-						// Set to true if load is ever lifted
-						if (!load->lifted)
-						{
-							load->lifted = true;
-						}
-
+						load->lifted = true;
 						break;
 					}
 				}
@@ -539,16 +547,19 @@ void Environment::act()
 			if (id == l_id)
 			{
 				// Update fitness:
-				// Lifting point coverage
-				float t_coverf = static_cast<float>(it->get()->t_cover);
-				float norm_t_coverf = t_coverf / it->get()->getPorters();
-				p_fitness += norm_t_coverf / it->get()->t_life;
-
 				// Displacement
 				float x_init = it->get()->getStartPosition().x;
 				float x_final = it->get()->getBody()->GetPosition().x;
 				float t_life_si = static_cast<float>(it->get()->t_life) / p_f_sim;
 				p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
+
+				// Lifting point coverage
+				float t_coverf = static_cast<float>(it->get()->t_cover);
+				float norm_t_coverf = t_coverf / it->get()->getPorters();
+				p_fitness += norm_t_coverf / it->get()->t_life;
+
+				// Reward being lowered
+				p_fitness += 1.0f;
 
 				// Remove load from current position
 				destroyLoad(it->get());

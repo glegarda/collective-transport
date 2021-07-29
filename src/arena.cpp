@@ -8,7 +8,7 @@ Arena::Arena(b2World* world)
 	p_body_data.type = ARENA;
 	p_body_data.id = 0;
 
-	p_fixture_data.resize(4);
+	p_fixture_data.resize(6);
 	p_fixture_data.at(0).type = BODY;
 	p_fixture_data.at(0).body_id = 0;
 	for (std::size_t i = 1; i < p_fixture_data.size(); ++i)
@@ -47,7 +47,7 @@ Arena::Arena(b2World* world)
 	p_body->CreateFixture(&arena_fixture_def);
 
 	// Add nest markers
-	float fraction[3] = {2.0f / 3.0f, 0.0f, -2.0f / 3.0f};
+	float fraction[5] = {4.0f/5.0f, 2.0f/5.0f, 0.0f, -2.0f/5.0f, -4.0f/5.0f};
 	unsigned short marker_n = 1;
 	for (const auto& f : fraction)
 	{
