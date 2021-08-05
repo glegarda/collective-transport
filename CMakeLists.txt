@@ -12,5 +12,6 @@ find_package(glfw3 3.3 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(Threads REQUIRED)
 
+
 add_subdirectory(src)
 add_subdirectory(tests)

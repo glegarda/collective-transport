@@ -63,23 +63,15 @@ int main()
 
 	Robot* robot = nullptr;
 	// Initial exploration
-	while (robot = env.getNextRobot())
+	while ((robot = env.getNextRobot()))
 	{
 		robot->controller.xml_tree = bt_exp;
 		robot->controller.updateSource();
 	}
 
-	float null_fitness = env.run(300);
-
-	// Set controllers of all the robots in the environment
-	while (robot = env.getNextRobot())
-	{
-		robot->controller.xml_tree = bt;
-		robot->controller.updateSource();
-	}
-
 	// Run simulation and compute controller fitness
-	env.render = true;
+	env.render = false;
+    env.new_prox = true;
 	float fitness = env.run(3600);
 
 	std::cout << fitness << std::endl;

@@ -116,7 +116,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 
 	// Proximity
 	VectorPolar v_prox;
-	short n_sensors = sizeof(g_rc.prox_angles) / sizeof(g_rc.prox_angles[0]);
+	short n_sensors = g_rc.prox_angles.size();
 	for (short i = 0; i < n_sensors; ++i)
 	{
 		v_prox += VectorPolar(scene.prox[i], g_rc.prox_angles[i]);
@@ -249,6 +249,28 @@ void Controller::printBB()
 	}
 
 	std::cout << "======================" << std::endl;
+}
+
+void Controller::guiBB(int x, int y)
+{
+	const auto& bb = p_tree.rootBlackboard();
+	std::vector<BT::StringView> keys = bb->getKeys();
+	for (const auto& key : keys)
+	{
+		std::string skey = BT::convertFromString<std::string>(key);
+		const BT::Any* value_any = bb->getAny(skey);
+		ImGui::SetCursorPos(ImVec2(x, y)); ImGui::Text("%8s ", skey.c_str()); ImGui::SameLine();
+		if (value_any->isNumber())
+		{
+			ImGui::Text(" % f", value_any->cast<float>());
+		}
+		else
+		{
+			VectorPolar value = value_any->cast<VectorPolar>();
+			ImGui::Text("[% f,% f]", value.r, value.a);
+		}
+		y += 10;
+	}
 }
 
 void Controller::tick()

@@ -11,11 +11,12 @@ class SimObject
 		~SimObject();
 		b2Body* getBody();
 		BodyData getBodyData();
+        std::vector<FixtureData> p_fixture_data;
+
 
 	protected:
 		b2Body* p_body;
 		BodyData p_body_data;
-		std::vector<FixtureData> p_fixture_data;
 };
 
 #endif

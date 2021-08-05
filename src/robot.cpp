@@ -13,17 +13,28 @@ Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
 	// Set body and fixture data
 	p_body_data.type = ROBOT;
 	p_body_data.id = p_next_id;
+    p_body_data.entity = reinterpret_cast<uintptr_t>(this);
 
-	p_fixture_data.resize(6);
+	// Body + cams + [ltof] + plat
+	int fixtures = 2 + g_rc.cam_angles.size();
+	if (g_rc.ltof_fixture)
+		fixtures += g_rc.prox_angles.size();
+
+	p_fixture_data.resize(fixtures);
 	p_fixture_data.at(0).type = BODY;
 	p_fixture_data.at(0).body_id = p_next_id;
-	for (std::size_t i = 1; i < p_fixture_data.size()-1; ++i)
+
+
+	for (std::size_t i = 1; i < fixtures - 1; ++i)
 	{
-		p_fixture_data.at(i).type = BODYCAM;
+		p_fixture_data.at(i).type = i <= g_rc.cam_angles.size() ? BODYCAM : BODYLTOF;
 		p_fixture_data.at(i).body_id = p_next_id;
+        p_fixture_data.at(i).fixture_idx = i;
 	}
-	p_fixture_data.at(5).type = PLATCAM;
-	p_fixture_data.at(5).body_id = p_next_id;
+	p_fixture_data.at(fixtures - 1).type = PLATCAM;
+	p_fixture_data.at(fixtures - 1).body_id = p_next_id;
+    p_fixture_data.at(fixtures - 1).fixture_idx = fixtures - 1;
+
 
 	// Create robot body
 	b2BodyDef robot_def;
@@ -43,8 +54,8 @@ Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
 	robot_fixture_def.friction = g_rc.friction;
 	robot_fixture_def.restitution = g_rc.restitution;
 	// Robots collide with the arena and with other robots
-	robot_fixture_def.filter.categoryBits = 0x0001;
-	robot_fixture_def.filter.maskBits = 0x0023;
+	robot_fixture_def.filter.categoryBits = CT_ROBOT;
+	robot_fixture_def.filter.maskBits = CT_ARENA | CT_CAM | CT_ROBOT | CT_LTOF;
 	robot_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(0));
 
 	p_body->CreateFixture(&robot_fixture_def);
@@ -60,7 +71,7 @@ Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
 	points[b2_maxPolygonVertices-1].Set(0.0, 0.0);
 
 	// Add body cameras
-	unsigned short cam_n = 1;
+	int fixture_idx = 1;
 	for (const auto& ca : g_rc.cam_angles)
 	{
 		// Transform points
@@ -82,14 +93,60 @@ Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
 		cam_fixture_def.shape = &cam_shape;
 		cam_fixture_def.isSensor = true;
 		// Body camera collides with the nest and robot bodies
-		cam_fixture_def.filter.categoryBits = 0x0002;
-		cam_fixture_def.filter.maskBits = 0x0041;
-		cam_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(cam_n));
+		cam_fixture_def.filter.categoryBits = CT_CAM;
+		cam_fixture_def.filter.maskBits = CT_ARENA_MARKER | CT_ROBOT;
+		cam_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(fixture_idx));
 
 		p_body->CreateFixture(&cam_fixture_def);
 
-		++cam_n;
+		++fixture_idx;
 	}
+    
+    if (g_rc.ltof_fixture)
+    {
+        // Ltof prox as wedge-shaped sensors
+        const int ltof_vertices = 3;
+        b2Vec2 points[ltof_vertices]; // 3 vertices
+        float d_angle = g_rc.ltof_fov /  (ltof_vertices - 2);
+        for (short i = 0; i < ltof_vertices - 1; i++)
+        {
+            points[i].Set(g_rc.ltof_max * std::cos(i * d_angle - g_rc.ltof_fov / 2),
+                          g_rc.ltof_max * std::sin(i * d_angle - g_rc.ltof_fov / 2));
+        }
+        points[2].Set(0.0, 0.0);
+        
+        // Add ltof cameras
+        for (const auto& ca : g_rc.prox_angles)
+        {
+            // Transform points
+            b2Vec2 pos(g_rc.radius * std::cos(ca), g_rc.radius * std::sin(ca));
+            b2Rot rot(ca);
+            b2Transform transform(pos, rot);
+            
+            b2Vec2 ltof_points[ltof_vertices];
+            for (std::size_t i = 0; i < sizeof(points)/sizeof(points[0]); i++)
+            {
+                ltof_points[i] = b2Mul(transform, points[i]);
+            }
+            
+            // Add ltof
+            b2PolygonShape ltof_shape;
+            ltof_shape.Set(ltof_points, ltof_vertices);
+            
+            b2FixtureDef ltof_fixture_def;
+            ltof_fixture_def.shape = &ltof_shape;
+            ltof_fixture_def.isSensor = true;
+            // Body camera collides with the nest and robot bodies
+            ltof_fixture_def.filter.categoryBits = CT_LTOF;
+            ltof_fixture_def.filter.maskBits = CT_ARENA | CT_ROBOT;
+            ltof_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(fixture_idx));
+            
+            p_body->CreateFixture(&ltof_fixture_def);
+            
+            ++fixture_idx;
+        }
+
+    }
 
 	// Platform camera as rectangular sensor (projection on load bottom)
 	addPlatformCamera();
@@ -368,8 +425,8 @@ void Robot::addPlatformCamera()
 	pcam_fixture_def.shape = &pcam_shape;
 	pcam_fixture_def.isSensor = true;
 	// Platform camera collides with loads and lifting points
-	pcam_fixture_def.filter.categoryBits = 0x0004;
-	pcam_fixture_def.filter.maskBits = 0x0018;
+	pcam_fixture_def.filter.categoryBits = CT_PCAM;
+	pcam_fixture_def.filter.maskBits = CT_LOAD_MARKER | CT_LOAD;
 	pcam_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.back());
 
 	p_pcam = (b2Fixture*)p_body->CreateFixture(&pcam_fixture_def);
@@ -382,3 +439,15 @@ void Robot::removePlatformCamera()
 }
 
 short Robot::p_next_id = 1;
+
+
+void Robot::aquired_entity(uintptr_t e, b2Fixture *sf, b2Fixture *df)
+{
+    SensorData item(sf, df, e);
+    visible_entities.push_back(item);
+}
+void Robot::lost_entity(uintptr_t e, b2Fixture *sf, b2Fixture *df)
+{
+    SensorData item(sf, df, e);
+    visible_entities.erase(std::find(visible_entities.begin(), visible_entities.end(), item));
+}

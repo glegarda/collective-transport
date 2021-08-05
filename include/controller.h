@@ -16,6 +16,7 @@ class Controller
 		              const std::vector<Message>& comms);
 		const BT::Blackboard::Ptr getBB();
 		void printBB();
+		void guiBB(int x, int y);
 		void tick();
 
 		std::string xml_tree;

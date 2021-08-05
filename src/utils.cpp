@@ -16,6 +16,11 @@ void sleep(sctime& start, float duration)
 	}
 }
 
+double delta(sctime t1, sctime t2)
+{
+    return std::chrono::duration<double>(t2 - t1).count();
+}
+
 VectorPolar::VectorPolar() : r(0.0f), a(0.0f) {}
 
 VectorPolar::VectorPolar(float radius, float azimuth) : r(radius), a(azimuth)

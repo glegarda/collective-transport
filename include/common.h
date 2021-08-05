@@ -22,6 +22,7 @@ struct BodyData
 
 	enum BodyType type;
 	unsigned short id;
+    uintptr_t entity;
 };
 
 enum FixtureType
@@ -29,17 +30,80 @@ enum FixtureType
 	FUNDEF,
 	BODY,
 	BODYCAM,
+    BODYLTOF,
 	PLATCAM,
 	MARKER
 };
 
+enum CategoryType
+{
+    CT_ROBOT            = 0x0001,
+    CT_CAM              = 0x0002,
+    CT_PCAM             = 0x0004,
+    CT_LOAD             = 0x0008,
+    CT_LOAD_MARKER      = 0x0010,
+    CT_ARENA            = 0x0020,
+    CT_ARENA_MARKER     = 0x0040,
+    CT_LTOF             = 0x0080,
+};
+
 struct FixtureData
 {
-	FixtureData() : type(FUNDEF), body_id(0) {}
+	FixtureData() : type(FUNDEF), body_id(0), fixture_idx(0) {}
 	~FixtureData() {}
 
 	enum FixtureType type;
 	unsigned short body_id;
+    // Use this to identify ltof sensor (and possibly cameras)
+    // 0    - robot shape
+    // 1-4  - cameras
+    // 5-20 - ltof
+    // 21   - platform camera
+    int fixture_idx;
+    uintptr_t entity;
+};
+
+
+struct SensorData
+{
+    SensorData(b2Fixture *sf, b2Fixture *df, uintptr_t e)
+    : sensor_fixture(sf), detected_fixture(df), entity(e) {}
+    b2Fixture   *sensor_fixture;
+    b2Fixture   *detected_fixture;
+    uintptr_t   entity;
+    // Define equality so erase works
+    bool operator==(const SensorData &rhs)
+    {
+        return (this->sensor_fixture == rhs.sensor_fixture) &&
+            (this->detected_fixture == rhs.detected_fixture) &&
+            (this->entity == rhs.entity);
+    }
+};
+
+struct SimParams
+{
+    // Rendering
+    bool render_prox = false;
+    bool render_cams = false;
+	bool render_ltof = false;
+	bool render_contacts = false;
+    bool single_step = false;
+    bool paused = true;
+    bool step = false;
+    
+    // mouse control
+    float scale = 0.1;
+    
+    // Stats
+    double model_time = 0.0;
+    std::vector<float> mt_array;
+    SimParams() : mt_array(500, 0.0) {}
+    void push_mt(float x)
+    {
+        for(int i = 0; i < mt_array.size() - 1; i++)
+            mt_array[i] = mt_array[i + 1];
+        mt_array[mt_array.size() - 1] = x;
+    }
 };
 
 struct RobotConstants
@@ -53,9 +117,9 @@ struct RobotConstants
 		density(40.7437),
 		friction(0.15),
 		restitution(0.1),
-		prox_angles{-2.7489, -2.3562, -1.9635, -1.5708, -1.1781, -0.7854,
-		            -0.3927,  0.0000,  0.3927,  0.7854,  1.1781,  1.5708,
-		             1.9635,  2.3562,  2.7489, 3.1416},
+        // SJ change to give same indices as hardware
+		prox_angles{ 0.0000,  0.3927,  0.7854,  1.1781,  1.5708,  1.9635,  2.3562,  2.7489,
+                     3.1416, -2.7489, -2.3562, -1.9635, -1.5708, -1.1781, -0.7854, -0.3927},
 		prox_max(0.15),
 		cam_angles{0.1745, 2.1526, 4.1306, 6.1087},
 		cam_fov(2.0944),
@@ -63,7 +127,11 @@ struct RobotConstants
 		cam_min(0.0),
 		pcam_fov_h(2.0944),
 		pcam_fov_v(1.5708),
-		comms_range(1.0) {}
+		comms_range(0.2),
+        ltof_fixture(true),
+        ltof_fov(0.40),
+        ltof_max(0.15)
+    {}
 	~RobotConstants() {}
 
 	// Physical properties
@@ -78,10 +146,10 @@ struct RobotConstants
 	float ut_max;
 	float restitution;
 	// Laser TOF distance sensors
-	float prox_angles[16];
+	std::vector<float> prox_angles;
 	float prox_max;
 	// Body cameras
-	float cam_angles[4];
+	std::vector<float> cam_angles;
 	float cam_fov;
 	float cam_max;
 	float cam_min;
@@ -90,6 +158,9 @@ struct RobotConstants
 	float pcam_fov_v;
 	// Communications
 	float comms_range;
+    bool ltof_fixture;
+    float ltof_fov;
+    float ltof_max;
 };
 
 struct LoadConstants
@@ -157,7 +228,8 @@ struct Neighbour
 struct Scene
 {
 	Scene() :
-		prox{0.0},
+        prox{0.0},
+        prox_ltof{0.0},
 		orientation(0.0),
 		heading(0.0),
 		n(0),
@@ -169,7 +241,8 @@ struct Scene
 		porters(0) {}
 	~Scene() {}
 
-	float prox[16];                         // proximity sensors
+    float prox[16];                         // proximity sensors
+    float prox_ltof[16];                         // proximity sensors
 	float orientation;                      // orientation
 	float heading;                          // heading
 	unsigned short n;                       // number of neighbours

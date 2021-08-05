@@ -1,6 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <iostream>
 #include <cmath>
 #include <chrono>
@@ -11,6 +15,8 @@
 
 using sclock = std::chrono::steady_clock;
 using sctime = std::chrono::time_point<std::chrono::steady_clock>;
+
+double delta(sctime t1, sctime t2);
 
 // Chronometer
 void sleep(sctime& start, float duration);

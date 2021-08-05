@@ -10,10 +10,12 @@ Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
 	// Set body and fixture data
 	p_body_data.type = LOAD;
 	p_body_data.id = p_next_id;
+    p_body_data.entity = reinterpret_cast<uintptr_t>(this);
 
 	p_fixture_data.resize(porters + 1);
 	p_fixture_data.at(0).type = BODY;
 	p_fixture_data.at(0).body_id = p_next_id;
+
 	for (std::size_t i = 1; i < p_fixture_data.size(); ++i)
 	{
 		p_fixture_data.at(i).type = MARKER;
@@ -101,8 +103,8 @@ Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
 	load_fixture_def.shape = &load_shape;
 	load_fixture_def.density = g_lc.density;
 	// Load collides with the arena, other loads and platform cameras
-	load_fixture_def.filter.categoryBits = 0x0008;
-	load_fixture_def.filter.maskBits = 0x002C;
+	load_fixture_def.filter.categoryBits = CT_LOAD;
+	load_fixture_def.filter.maskBits = CT_ARENA | CT_LOAD | CT_PCAM |CT_LTOF;
 	load_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(0));
 
 	p_body->CreateFixture(&load_fixture_def);
@@ -119,8 +121,8 @@ Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
 		marker_fixture_def.shape = &marker_shape;
 		// Lifting point collides with other lifting points and with platform
 		// cameras
-		marker_fixture_def.filter.categoryBits = 0x0010;
-		marker_fixture_def.filter.maskBits = 0x0014;
+		marker_fixture_def.filter.categoryBits = CT_LOAD_MARKER;
+		marker_fixture_def.filter.maskBits = CT_LOAD_MARKER | CT_PCAM;
 		marker_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(marker_n++));
 
 		p_body->CreateFixture(&marker_fixture_def);

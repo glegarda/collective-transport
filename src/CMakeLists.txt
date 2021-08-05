@@ -25,7 +25,29 @@ set(ECT_HEADER_FILES
 	../include/sim_object.h
 	../include/utils.h)
 
-add_library(ect ${ECT_SOURCE_FILES} ${ECT_HEADER_FILES})
+
+set(IMGUI_FILES
+	imgui.cpp
+	imgui_draw.cpp
+	imgui_tables.cpp
+	imgui_widgets.cpp
+	imgui_impl_glfw.cpp
+	imgui_impl_opengl3.cpp
+	imgui_demo.cpp
+	../include/imgui.h
+	../include/imgui_internal.h
+	../include/imconfig.h
+	../include/imstb_rectpack.h
+	../include/imstb_textedit.h
+	../include/imstb_truetype.h
+	../include/imgui_impl_glfw.h
+	../include/imgui_impl_opengl3.h
+)
+
+add_library(ect 
+	${ECT_SOURCE_FILES} 
+	${ECT_HEADER_FILES}
+	${IMGUI_FILES})
 
 target_include_directories(ect PUBLIC ../include)
 
@@ -34,7 +56,7 @@ target_link_libraries(ect PUBLIC
 	box2d::box2d
 	glfw
 	GLEW::GLEW
-	GL
+	${OPENGL_LIBRARIES}
 	Threads::Threads)
 
 add_executable(gp gp.cpp)
