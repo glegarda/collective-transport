@@ -138,7 +138,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_attr = VectorPolar(0.0f, 0.0f);
+		v_attr = VectorPolar(1.0f, 0.0f);
 	}
 
 	bb->set("sn", static_cast<float>(scene.n));
@@ -177,7 +177,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_recr = VectorPolar(0.0f, 0.0f);
+		v_recr = VectorPolar(1.0f, 0.0f);
 	}
 
 	bb->set("vrecr", v_recr);
@@ -214,7 +214,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_lift = VectorPolar(0.0f, 0.0f);
+		v_lift = VectorPolar(1.0f, 0.0f);
 	}
 
 	bb->set("vlift", v_lift);
