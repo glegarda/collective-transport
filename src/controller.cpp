@@ -138,7 +138,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_attr = VectorPolar(1.0f, 0.0f);
+		v_attr = VectorPolar(0.0f, 0.0f);
 	}
 
 	bb->set("sn", static_cast<float>(scene.n));
@@ -177,7 +177,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_recr = VectorPolar(1.0f, 0.0f);
+		v_recr = VectorPolar(0.0f, 0.0f);
 	}
 
 	bb->set("vrecr", v_recr);
@@ -214,7 +214,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	}
 	else
 	{
-		v_lift = VectorPolar(1.0f, 0.0f);
+		v_lift = VectorPolar(0.0f, 0.0f);
 	}
 
 	bb->set("vlift", v_lift);
@@ -251,26 +251,30 @@ void Controller::printBB()
 	std::cout << "======================" << std::endl;
 }
 
-void Controller::guiBB(int x, int y)
+void Controller::guiBB(int x, int y, Message &m)
 {
 	const auto& bb = p_tree.rootBlackboard();
 	std::vector<BT::StringView> keys = bb->getKeys();
 	for (const auto& key : keys)
 	{
 		std::string skey = BT::convertFromString<std::string>(key);
+        if (skey == "vzero" || skey == "szero") continue;
 		const BT::Any* value_any = bb->getAny(skey);
 		ImGui::SetCursorPos(ImVec2(x, y)); ImGui::Text("%8s ", skey.c_str()); ImGui::SameLine();
 		if (value_any->isNumber())
 		{
-			ImGui::Text(" % f", value_any->cast<float>());
+			ImGui::Text(" % 6.4f", value_any->cast<float>());
 		}
 		else
 		{
 			VectorPolar value = value_any->cast<VectorPolar>();
-			ImGui::Text("[% f,% f]", value.r, value.a);
+			ImGui::Text("[% 6.4f,% 6.4f]", value.r, value.a);
 		}
 		y += 10;
 	}
+    ImGui::SetCursorPos(ImVec2(x, y)); ImGui::Text("mid:%d lid:%d gid:%d vv:[% 5.3f % 5.3f] pv:%f",
+                                                   m.id_messenger, m.id_load, m.id_group, m.v_vote.r,
+                                                   m.v_vote.a, m.p_vote);
 }
 
 void Controller::tick()

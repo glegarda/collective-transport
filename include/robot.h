@@ -23,6 +23,7 @@ public:
     void attachLoad(b2World* world, Load* load);
     unsigned short detachLoad(b2World* world);
     Load* getLoad();
+    b2Transform getPose();
     
     Controller controller;
     Message message;

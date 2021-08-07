@@ -78,4 +78,24 @@ float covariance(const std::vector<T1>& v1, const std::vector<T2>& v2)
 	return (cum_cov / n);
 }
 
+struct CommandLineParams
+{
+    bool gui = true;
+    bool new_prox = false;
+    bool benchmark = false;
+    std::string treefile = "";
+    float simtime = 120;
+    int randseed = 1;
+    std::string logfile = "";
+    int loglevel = 0;
+    int hz = 30;
+    int vi = 8;
+    int pi = 3;
+    bool verbose = false;
+    bool rand_position = true;
+    int num_agents = 16;
+};
+
+void process_args(int argc, char **argv, CommandLineParams &p);
+
 #endif

@@ -82,6 +82,10 @@ struct SensorData
 
 struct SimParams
 {
+    // Container for global parameters controlling aspects of GUI etc.
+    // Mostly initialised by command line parameters, and altered by GUI
+    // widgets
+    
     // Rendering
     bool render_prox = false;
     bool render_cams = false;
@@ -105,6 +109,9 @@ struct SimParams
         mt_array[mt_array.size() - 1] = x;
     }
 };
+
+
+
 
 struct RobotConstants
 {

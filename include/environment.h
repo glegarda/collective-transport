@@ -30,7 +30,7 @@ class ContactListener : public b2ContactListener
 class Environment
 {
 public:
-    Environment();
+    Environment(CommandLineParams &g_cmd);
     ~Environment();
     
     void addArena();
@@ -38,7 +38,10 @@ public:
     void addLoad(const b2Vec2& position, unsigned short porters);
     Robot* getNextRobot();
     float run(unsigned long long duration);
+    void addRandomRobots();
     
+    
+    float p_f_sim;
     bool render;
     bool new_prox = false;
     
@@ -68,15 +71,15 @@ private:
     void drawRobots();
     void drawContacts();
     void process_visible(std::unique_ptr<Robot> &robot);
+    void do_logging(unsigned long long step);
 
-
-    
+    CommandLineParams g_cmd;
+    FILE *logfile = 0;
     b2World* p_world;
     std::unique_ptr<Arena> p_arena;
     uvector<Robot> p_robots;
     uvector<Load> p_loads;
     std::size_t p_next;
-    float p_f_sim;
     float p_fitness;
     GLFWwindow* p_window;
     ContactListener contactlistener_inst;

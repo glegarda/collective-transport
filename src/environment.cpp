@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+#include <cstdio>
 #include "environment.h"
 #include "arena.h"
 #include "utils.h"
@@ -18,14 +19,16 @@ SimParams g_sp;
 
 
 
-Environment::Environment() :
-	render(false),
+Environment::Environment(CommandLineParams &g_cmd) :
+    render(g_cmd.gui),
 	p_world(new b2World(b2Vec2(0.0f, 0.0f))),
 	p_arena(nullptr),
 	p_next(0),
-	p_f_sim(30.0f),
+	p_f_sim(g_cmd.hz),
 	p_fitness(0.0f),
-	p_window(nullptr)
+	p_window(nullptr),
+    new_prox(g_cmd.new_prox),
+    g_cmd(g_cmd)
 {
     physics_per_ctrl = std::ceil(g_rc.t_control / (1.0f / p_f_sim));
     p_world->SetContactListener(&contactlistener_inst);
@@ -46,6 +49,57 @@ void Environment::addRobot(const b2Vec2& position, float angle)
 {
 	std::unique_ptr<Robot> r = std::make_unique<Robot>(p_world, position, angle);
 	p_robots.push_back(std::move(r));
+}
+
+
+void Environment::addRandomRobots()
+{
+    // Brute force a random placement
+    const float initial_min_x   = 0.0;
+    const float initial_max_x   = 2.2;
+    const float initial_min_y   = -2.2;
+    const float initial_max_y   = 2.2;
+    const float min_sep         = 0.6;
+    std::vector<b2Vec2> positions(g_cmd.num_agents);
+    int good_points;
+    for(int trials = 0; trials < 100; trials++)
+    {
+        good_points = 1;
+        positions[0] = b2Vec2(rndf(initial_min_x, initial_max_x), rndf(initial_min_y, initial_max_y));
+        int attempts = 0;
+        while ((good_points < g_cmd.num_agents) && (attempts++ < 10000))
+        {
+            positions[good_points] = b2Vec2(rndf(initial_min_x, initial_max_x), rndf(initial_min_y, initial_max_y));
+            // Check
+            bool ok = true;
+            for(int i = 0; i <= good_points; i++)
+            {
+                for(int j = i + 1; j <= good_points; j++)
+                {
+                    auto d = b2Distance(positions[i], positions[j]);
+                    //printf("%d %d %d %2d %2d %f\n", trials, attempts, good_points, i, j, d);
+                    if (d < min_sep)
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+                if (!ok) break;
+            }
+            if (ok) good_points++;
+        }
+        if (good_points == g_cmd.num_agents)
+            break;
+    }
+    if (good_points < g_cmd.num_agents)
+    {
+        printf("Failed to find placement solution! Only %d\n", good_points);
+        exit(1);
+    }
+    for(int n = 0; n < g_cmd.num_agents; n++)
+    {
+        addRobot(positions[n], rndf(-M_PI, M_PI));
+    }
 }
 
 void Environment::addLoad(const b2Vec2& position, unsigned short porters)
@@ -96,30 +150,54 @@ void Environment::updateFitness()
 float Environment::finalFitness()
 {
     // Update fitness
+    float load_velocity = 0;
+    float load_coverage = 0;
+    float load_actions = 0;
     for (const auto& load : p_loads)
     {
+        // Displacement
+        float x_init = load->getStartPosition().x;
+        float x_final = load->getBody()->GetPosition().x;
+        float t_life_si = static_cast<float>(load->t_life) / p_f_sim;
+        load_velocity += (x_final - x_init) / (t_life_si * g_rc.v_max);
+        
+        // Penalise never being lifted
+        if (!load->lifted)
+        {
+            load_actions -= 1.0f;
+        }
+        
+        // Reward begin lowered
+        if (load->lowered)
+        {
+            load_actions += 1.0f;
+        }
+        
         // Lifting point coverage
         float t_coverf = static_cast<float>(load->t_cover);
         float norm_t_coverf = t_coverf / load->getPorters();
-        p_fitness += norm_t_coverf / load->t_life;
-
-        if (load->lifted)
-        {
-            // Displacement
-            float x_init = load->getStartPosition().x;
-            float x_final = load->getBody()->GetPosition().x;
-            float t_life_si = static_cast<float>(load->t_life) / p_f_sim;
-            p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
-        }
-        else
-        {
-            // Penalise never being lifted
-            p_fitness -= 1;
-        }
+        load_coverage += norm_t_coverf / load->t_life;
     }
+    
+    p_fitness = load_velocity + load_coverage + load_actions;
+    printf("% 8f % 8f % 8f % 8f\n", load_velocity, load_coverage, load_actions, p_fitness);
+
     return p_fitness;
 }
 
+void Environment::do_logging(unsigned long long step)
+{
+    if (!logfile) return;
+    if (g_cmd.loglevel == 0)
+    {
+        for(int i = 0; i < p_robots.size(); i++)
+        {
+            auto &r = p_robots[i];
+            auto p = r->getPose();
+            fprintf(logfile, "r%02d %10llu % 6.3f % 6.3f % 6.3f\n", i, step, p.p.x, p.p.y, p.q.GetAngle());
+        }
+    }
+}
 
 float Environment::run(unsigned long long duration)
 {
@@ -128,6 +206,10 @@ float Environment::run(unsigned long long duration)
     // with fractional to multiple timesteps per rendered frame.
     // Displaying at 1x requires two frames per timestep, since
     // the default physics timestep is 30Hz
+    if (g_cmd.logfile.size())
+    {
+        logfile = fopen(g_cmd.logfile.c_str(), "w");
+    }
     
     sctime start = sclock::now();
     initFitness();
@@ -138,15 +220,21 @@ float Environment::run(unsigned long long duration)
 		if (render) renderPredraw();
         if (!render || (!g_sp.paused || (g_sp.paused && g_sp.step)))
         {
+            do_logging(i);
             simStep();
+            updateFitness();
             g_sp.step = false;
-            printf("Loop %5u time %f\n", i, g_sp.model_time);
+            //printf("Loop %5u time %f\r", i, g_sp.model_time);
             i++;
         }
 		if (render) renderStep();
 	}
-
-
+    //printf("\n");
+    
+    if (g_cmd.logfile.size())
+    {
+        fclose(logfile);
+    }
     renderCleanup();
 
 	return finalFitness();
@@ -156,7 +244,7 @@ float Environment::run(unsigned long long duration)
 void Environment::simStep()
 {
     // Run one physics step, then, if necessary, run controller
-    p_world->Step(1.0f / p_f_sim, 8, 3);
+    p_world->Step(1.0f / p_f_sim, g_cmd.vi, g_cmd.pi);
     if (loop % physics_per_ctrl == 0)
     {
         sctime start = sclock::now();
@@ -266,6 +354,7 @@ bool is_zero(float x)
 }
 bool check_intersection(b2Vec2 &p0, b2Vec2 &p1, b2Vec2 &q0, b2Vec2 &q1, b2Vec2 &i)
 {
+    // line segment - line segment intersection
     // https://www.codeproject.com/Tips/862988/Find-the-Intersection-Point-of-Two-Line-Segments
     auto r = p1 - p0;
     auto s = q1 - q0;
@@ -290,6 +379,7 @@ bool check_intersection(b2Vec2 &p0, b2Vec2 &p1, b2Vec2 &q0, b2Vec2 &q1, b2Vec2 &
 
 bool check_intersection(b2Vec2 &p0, b2Vec2 &p1, b2Vec2 &q, float r, b2Vec2 &i)
 {
+    // line segment - circle intersection
     // https://stackoverflow.com/questions/1073336/circle-line-segment-collision-detection-algorithm
     auto d = p1 - p0;
     auto f = p0 - q;
@@ -767,6 +857,15 @@ void Environment::act()
 				unsigned short tmp_id = robot->detachLoad(p_world);
 				robot->platform_up = false;
 
+				for (auto& load : p_loads)
+				{
+					if (load->getBodyData().id == tmp_id)
+					{
+						load->lowered = true;
+						break;
+					}
+				}
+
 				// If any of the robots are at the nest, add load to list
 				if (robot->scene.rb_nest.r > 0.0f &&
 				    robot->scene.rb_nest.r < g_ac.nest_r)
@@ -797,12 +896,7 @@ void Environment::act()
 						robot->attachLoad(p_world, load.get());
 						robot->platform_up = true;
 
-						// Set to true if load is ever lifted
-						if (!load->lifted)
-						{
-							load->lifted = true;
-						}
-
+						load->lifted = true;
 						break;
 					}
 				}
@@ -811,39 +905,43 @@ void Environment::act()
 	}
 
 	// Reset/Delete loads placed at nest
-	for (const auto& id : load_id)
-	{
-		//resetLoad(id);
-
-		for (auto it = p_loads.begin(); it != p_loads.end();)
-		{
-			unsigned short l_id = it->get()->getBodyData().id;
-			if (id == l_id)
-			{
-				// Update fitness:
-				// Lifting point coverage
-				float t_coverf = static_cast<float>(it->get()->t_cover);
-				float norm_t_coverf = t_coverf / it->get()->getPorters();
-				p_fitness += norm_t_coverf / it->get()->t_life;
-
-				// Displacement
-				float x_init = it->get()->getStartPosition().x;
-				float x_final = it->get()->getBody()->GetPosition().x;
-				float t_life_si = static_cast<float>(it->get()->t_life) / p_f_sim;
-				p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
-
-				// Remove load from current position
-				destroyLoad(it->get());
-				it = p_loads.erase(it);
-
-				break;
-			}
-			else
-			{
-				++it;
-			}
-		}
-	}
+    // SJ removed for now to make sure fitness only calculated in one place
+//	for (const auto& id : load_id)
+//	{
+//		//resetLoad(id);
+//
+//		for (auto it = p_loads.begin(); it != p_loads.end();)
+//		{
+//			unsigned short l_id = it->get()->getBodyData().id;
+//			if (id == l_id)
+//			{
+//				// Update fitness:
+//				// Displacement
+//				float x_init = it->get()->getStartPosition().x;
+//				float x_final = it->get()->getBody()->GetPosition().x;
+//				float t_life_si = static_cast<float>(it->get()->t_life) / p_f_sim;
+//				p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
+//
+//				// Lifting point coverage
+//				float t_coverf = static_cast<float>(it->get()->t_cover);
+//				float norm_t_coverf = t_coverf / it->get()->getPorters();
+//				p_fitness += norm_t_coverf / it->get()->t_life;
+//
+//				// Reward being lowered
+//				p_fitness += 1.0f;
+//
+//				// Remove load from current position
+//				destroyLoad(it->get());
+//				it = p_loads.erase(it);
+//
+//				break;
+//			}
+//			else
+//			{
+//				++it;
+//			}
+//		}
+//	}
 }
 
 void Environment::renderSetup()
@@ -950,7 +1048,7 @@ void Environment::renderPredraw()
     //ImGui::SetCursorPos(ImVec2(300, 0));
 	// Display robot 0 BB
 	auto &r = p_robots[0];
-	r->controller.guiBB(150, 0);
+	r->controller.guiBB(200, 0, r->message);
     ImGui::End();
     
     g_camera.m_zoom = zoom;
@@ -973,8 +1071,6 @@ void Environment::renderPredraw()
     
 void Environment::renderStep()
 {
-
-
 
     // Draw simulation features
     drawArena();

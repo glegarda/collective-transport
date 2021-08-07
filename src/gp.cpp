@@ -14,11 +14,15 @@
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <behaviortree_cpp_v3/loggers/bt_cout_logger.h>
 
+
+CommandLineParams g_cmd;
+
+
 struct EvoParams
 {
-	unsigned long long t_sim = 2600; // 2 minutes
+	unsigned long long t_sim = 3600; // 2 minutes
 	unsigned long long t_exp = 300; // 10 seconds
-	unsigned int population = 20;
+	unsigned int population = 20; // 20
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
 	unsigned short n_evals = 4;
@@ -76,9 +80,13 @@ struct ExecutionXML {
 
 	std::string home = R"(
 	<!-- HOME -->
-	<ReactiveFallback>
-		<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
-	</ReactiveFallback>
+	<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
+	<!---------->
+	)";
+	
+	std::string position = R"(
+	<!-- POSITION -->
+	<Mulav arg0="{vvote}" arg1="{vlift}" arg2="-5.000" arg3="{vprox}"/>
 	<!---------->
 	)";
 	
@@ -323,6 +331,7 @@ enum NodeID
 	EXPLORE,
 	ATTRACT,
 	RECRUIT,
+	POSITION,
 	HOME
 };
 typedef enum NodeID NodeID; 
@@ -391,6 +400,7 @@ std::map<NodeID, GPNode> execution_set
 	{EXPLORE,  {"Explore",  0, 0, {},               ExecutionXML.exploration}},
 	{ATTRACT,  {"Attract",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.attraction }},
 	{RECRUIT,  {"Recruit",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.recruitment}},
+	{POSITION, {"Position", 0, 0, {},               ExecutionXML.position   }},
 	{HOME,     {"Home",     0, 0, {},               ExecutionXML.home       }}
 };
 
@@ -609,6 +619,11 @@ void init_genes(GPTree& gpt,
 // Evaluate solution -> simulation required
 bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 {
+    // Get a unique thread id
+    std::thread::id this_id = std::this_thread::get_id();
+    auto tid = std::hash<std::thread::id>()(this_id);
+    
+    
 	gpmc.tree_size = gpt.tree.size();
 	gpmc.fitness = 0.0f;
 	std::string bt = printTree(gpt, "MainTree");
@@ -616,44 +631,44 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 	for (auto i = 0; i < EvoParams.n_evals; ++i)
 	{
 		// Initialise environment
-		Environment env;
+        //printf("%016lx %d start\n", tid, i);
+		Environment env(g_cmd);
 		
 		env.addArena();
 
 		env.addLoad(b2Vec2(-1.5f,  1.25f), 2);
 		env.addLoad(b2Vec2(-1.5f,  0.00f), 2);
 		env.addLoad(b2Vec2(-1.5f, -1.25f), 2);
+        
+        if (g_cmd.rand_position)
+        {
+            env.addRandomRobots();
+        }
+        else
+        {
+            env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
+            env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
+        }
 
-		env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
-
-		// Initial exploration
-		GPTree exp_tree;
-		GPNode root = execution_set.at(EXPLORE);
-		exp_tree.tree.push_back(root);
-		std::string exp_bt = printTree(exp_tree, "MainTree");
 
 		Robot* robot = nullptr;
-		while (robot = env.getNextRobot())
-		{
-			robot->controller.xml_tree = exp_bt;
-			robot->controller.updateSource();
-		}
-
-		float null_fitness = env.run(EvoParams.t_exp);
-
+		
 		// Set controllers of all the robots in the environment
-		while (robot = env.getNextRobot())
+		while ((robot = env.getNextRobot()))
 		{
 			robot->controller.xml_tree = bt;
 			robot->controller.updateSource();
@@ -661,10 +676,13 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 
 		// Run simulation and compute controller fitness
 		gpmc.fitness += env.run(EvoParams.t_sim);
+        //printf("%016lx %d done eval\n", tid, i);
+
 	}
 
 	// Mean fitness
 	gpmc.fitness /= EvoParams.n_evals;
+    printf("%016lx   final %f\n", tid, gpmc.fitness);
 
 	return true;
 }
@@ -883,7 +901,8 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType& X,
 {
 	float f = X.middle_costs.fitness;
 	float l = X.middle_costs.tree_size;
-	float cost = -(f - parsimony_coefficient * l);
+    //float cost = -(f - parsimony_coefficient * l);
+    float cost = -f;
 	return cost;
 }
 
@@ -910,20 +929,37 @@ void SO_report_generation(
 		<< "Best = " << last_generation.best_total_cost << "\n"
 		<< "Average = " << last_generation.average_cost << "\n"
 		<< "Exe time = " << last_generation.exe_time << "\n"
+		<< "Best size = " << best_genes.tree.size() << "\n"
 		<< "--------------------------------------------------\n"
 		<< printTree(best_genes, "MainTree") << "\n";
+    
+    int i = 0;
+    for(auto &c : last_generation.chromosomes)
+    {
+        output_file
+        << "==================================================\n"
+        << "Chromosone [" << i++ << "] cost [" << c.total_cost << "]\n"
+        << "--------------------------------------------------\n"
+        << printTree(c.genes, "MainTree") << "\n";
+        
+    }
 }
 
 int main(int argc, char* argv[])
 {
-	// Create and open output file
+    // Process command line args
+    process_args(argc, argv, g_cmd);
+    
+    g_cmd.gui = false;
+    
+    // Create and open output file
 	output_file.open("report.txt");
 
 	// Process optional input
-	if (argc > 1)
-	{
-		EvoParams.t_sim = std::atoll(argv[1]);
-	}
+//	if (argc > 1)
+//	{
+		EvoParams.t_sim = 1000;
+//	}
 
 	// Start timer
 	EA::Chronometer timer;
@@ -933,8 +969,9 @@ int main(int argc, char* argv[])
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
+    ga_obj.N_threads = 16;
 	ga_obj.idle_delay_us = 1; // switch between threads quickly
-	ga_obj.verbose = false;
+	ga_obj.verbose = g_cmd.verbose;
 	ga_obj.population = EvoParams.population;
 	ga_obj.generation_max = 200;
 	ga_obj.calculate_parsimony_coefficient = calculate_parsimony_coefficient;
@@ -955,7 +992,7 @@ int main(int argc, char* argv[])
 	std::time_t current_time = std::chrono::system_clock::to_time_t(current);
 	output_file << "**************************************************\n"
 	            << std::ctime(&current_time) << "\n"
-	            << "Number of robots: " << "12\n"
+	            << "Number of robots: " << "16\n"
 	            << "Number of loads: " << "3, 2-porters\n"
 	            << "Population: " << EvoParams.population << "\n"
 	            << "Generations: " << ga_obj.generation_max << "\n"

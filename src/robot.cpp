@@ -232,6 +232,11 @@ float Robot::getHeading()
 	return v.a;
 }
 
+b2Transform Robot::getPose()
+{
+    return p_body->GetTransform();
+}
+
 // Set message contents for broadcasting: load ID and votes
 void Robot::setMessage()
 {

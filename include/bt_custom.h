@@ -538,7 +538,7 @@ class Ifsect : public ConditionNode
 
 			if (hw == 0)
 			{
-				if (v.r >= 0.1f)
+				if (v.r < 0.1f)
 				{
 					return NodeStatus::FAILURE;
 				}

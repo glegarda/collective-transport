@@ -4,7 +4,7 @@
 #include "load.h"
 
 Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
-	t_life(0), t_cover(0), lifted(false),
+	t_life(0), t_cover(0), lifted(false), lowered(false),
 	p_start_position(position), p_porters(porters)
 {
 	// Set body and fixture data
@@ -104,7 +104,7 @@ Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
 	load_fixture_def.density = g_lc.density;
 	// Load collides with the arena, other loads and platform cameras
 	load_fixture_def.filter.categoryBits = CT_LOAD;
-	load_fixture_def.filter.maskBits = CT_ARENA | CT_LOAD | CT_PCAM |CT_LTOF;
+	load_fixture_def.filter.maskBits = CT_ARENA | CT_LOAD | CT_PCAM | CT_LTOF;
 	load_fixture_def.userData.pointer = reinterpret_cast<uintptr_t>(&p_fixture_data.at(0));
 
 	p_body->CreateFixture(&load_fixture_def);
