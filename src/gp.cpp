@@ -682,7 +682,7 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 
 	// Mean fitness
 	gpmc.fitness /= EvoParams.n_evals;
-    printf("%016lx   final %f\n", tid, gpmc.fitness);
+    //printf("%016lx   final %f\n", tid, gpmc.fitness);
 
 	return true;
 }
@@ -901,8 +901,8 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType& X,
 {
 	float f = X.middle_costs.fitness;
 	float l = X.middle_costs.tree_size;
-    //float cost = -(f - parsimony_coefficient * l);
-    float cost = -f;
+    float cost = -(f - parsimony_coefficient * l);
+    //float cost = -f;
 	return cost;
 }
 
@@ -933,16 +933,16 @@ void SO_report_generation(
 		<< "--------------------------------------------------\n"
 		<< printTree(best_genes, "MainTree") << "\n";
     
-    int i = 0;
-    for(auto &c : last_generation.chromosomes)
-    {
-        output_file
-        << "==================================================\n"
-        << "Chromosone [" << i++ << "] cost [" << c.total_cost << "]\n"
-        << "--------------------------------------------------\n"
-        << printTree(c.genes, "MainTree") << "\n";
-        
-    }
+//    int i = 0;
+//    for(auto &c : last_generation.chromosomes)
+//    {
+//        output_file
+//        << "==================================================\n"
+//        << "Chromosone [" << i++ << "] cost [" << c.total_cost << "]\n"
+//        << "--------------------------------------------------\n"
+//        << printTree(c.genes, "MainTree") << "\n";
+//
+//    }
 }
 
 int main(int argc, char* argv[])
@@ -956,10 +956,8 @@ int main(int argc, char* argv[])
 	output_file.open("report.txt");
 
 	// Process optional input
-//	if (argc > 1)
-//	{
-		EvoParams.t_sim = 1000;
-//	}
+    EvoParams.t_sim = g_cmd.simtime * g_cmd.hz;
+    printf("Simulating %f seconds at %d hz = %llu physics ticks\n", g_cmd.simtime, g_cmd.hz, EvoParams.t_sim);
 
 	// Start timer
 	EA::Chronometer timer;

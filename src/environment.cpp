@@ -180,7 +180,8 @@ float Environment::finalFitness()
     }
     
     p_fitness = load_velocity + load_coverage + load_actions;
-    printf("% 8f % 8f % 8f % 8f\n", load_velocity, load_coverage, load_actions, p_fitness);
+    if (g_cmd.verbose)
+        printf("% 8f % 8f % 8f % 8f\n", load_velocity, load_coverage, load_actions, p_fitness);
 
     return p_fitness;
 }
