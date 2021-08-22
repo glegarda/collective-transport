@@ -14,6 +14,10 @@
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <behaviortree_cpp_v3/loggers/bt_cout_logger.h>
 
+
+CommandLineParams g_cmd;
+
+
 struct EvoParams
 {
 	unsigned long long t_sim = 3600; // 2 minutes
@@ -661,56 +665,56 @@ void init_genes(GPTree& gpt,
 // Evaluate solution -> simulation required
 bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 {
+	// Get a unique thread id
+	std::thread::id this_id = std::this_thread::get_id();
+	auto tid = std::hash<std::thread::id>()(this_id);
+	
+	
 	gpmc.tree_size = gpt.tree.size();
 	gpmc.fitness = 0.0f;
 	std::string bt = printTree(gpt, "MainTree");
 
-/*
 	for (auto i = 0; i < EvoParams.n_evals; ++i)
 	{
 		// Initialise environment
-		Environment env;
+		//printf("%016lx %d start\n", tid, i);
+		Environment env(g_cmd);
 		
 		env.addArena();
 
 		env.addLoad(b2Vec2(-1.5f,  1.25f), 2);
 		env.addLoad(b2Vec2(-1.5f,  0.00f), 2);
 		env.addLoad(b2Vec2(-1.5f, -1.25f), 2);
-
-		env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
-		env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
-
-		// Initial exploration
-		GPTree exp_tree;
-		GPNode root = execution_set.at(EXPLORE);
-		exp_tree.tree.push_back(root);
-		std::string exp_bt = printTree(exp_tree, "MainTree");
-
-		Robot* robot = nullptr;
-		while (robot = env.getNextRobot())
+		
+		if (g_cmd.rand_position)
 		{
-			robot->controller.xml_tree = exp_bt;
-			robot->controller.updateSource();
+			env.addRandomRobots();
+		}
+		else
+		{
+			env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
+			env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
 		}
 
-		float null_fitness = env.run(EvoParams.t_exp);
 
+		Robot* robot = nullptr;
+		
 		// Set controllers of all the robots in the environment
-		while (robot = env.getNextRobot())
+		while ((robot = env.getNextRobot()))
 		{
 			robot->controller.xml_tree = bt;
 			robot->controller.updateSource();
@@ -718,13 +722,13 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 
 		// Run simulation and compute controller fitness
 		gpmc.fitness += env.run(EvoParams.t_sim);
+		//printf("%016lx %d done eval\n", tid, i);
+
 	}
 
 	// Mean fitness
 	gpmc.fitness /= EvoParams.n_evals;
-*/
-
-	gpmc.fitness = rndf(0.0f, 10.0f);
+	//printf("%016lx   final %f\n", tid, gpmc.fitness);
 
 	return true;
 }
@@ -944,6 +948,7 @@ double calculate_SO_total_fitness(const GA_Type::thisChromosomeType& X,
 	float f = X.middle_costs.fitness;
 	float l = X.middle_costs.tree_size;
 	float cost = -(f - parsimony_coefficient * l);
+	//float cost = -f;
 	return cost;
 }
 
@@ -973,18 +978,32 @@ void SO_report_generation(
 		<< "Best size = " << best_genes.tree.size() << "\n"
 		<< "--------------------------------------------------\n"
 		<< printTree(best_genes, "MainTree") << "\n";
+	
+//	int i = 0;
+//	for(auto &c : last_generation.chromosomes)
+//	{
+//		output_file
+//		<< "==================================================\n"
+//		<< "Chromosone [" << i++ << "] cost [" << c.total_cost << "]\n"
+//		<< "--------------------------------------------------\n"
+//		<< printTree(c.genes, "MainTree") << "\n";
+//
+//	}
 }
 
 int main(int argc, char* argv[])
 {
+	// Process command line args
+	process_args(argc, argv, g_cmd);
+	
+	g_cmd.gui = false;
+	
 	// Create and open output file
 	output_file.open("report.txt");
 
 	// Process optional input
-	if (argc > 1)
-	{
-		EvoParams.t_sim = std::atoll(argv[1]);
-	}
+	EvoParams.t_sim = g_cmd.simtime * g_cmd.hz;
+	printf("Simulating %f seconds at %d hz = %llu physics ticks\n", g_cmd.simtime, g_cmd.hz, EvoParams.t_sim);
 
 	// Start timer
 	EA::Chronometer timer;
@@ -994,8 +1013,9 @@ int main(int argc, char* argv[])
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
+	ga_obj.N_threads = 16;
 	ga_obj.idle_delay_us = 1; // switch between threads quickly
-	ga_obj.verbose = false;
+	ga_obj.verbose = g_cmd.verbose;
 	ga_obj.population = EvoParams.population;
 	ga_obj.generation_max = 5000;
 	ga_obj.calculate_parsimony_coefficient = calculate_parsimony_coefficient;

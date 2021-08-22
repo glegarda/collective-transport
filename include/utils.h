@@ -1,6 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 #include <iostream>
 #include <cmath>
 #include <chrono>
@@ -9,6 +13,8 @@
 
 using sclock = std::chrono::steady_clock;
 using sctime = std::chrono::time_point<std::chrono::steady_clock>;
+
+double delta(sctime t1, sctime t2);
 
 // Chronometer
 void sleep(sctime& start, float duration);
@@ -69,5 +75,25 @@ float covariance(const std::vector<T1>& v1, const std::vector<T2>& v2)
 
 	return (cum_cov / n);
 }
+
+struct CommandLineParams
+{
+    bool gui = true;
+    bool new_prox = false;
+    bool benchmark = false;
+    std::string treefile = "";
+    float simtime = 120;
+    int randseed = 1;
+    std::string logfile = "";
+    int loglevel = 0;
+    int hz = 30;
+    int vi = 8;
+    int pi = 3;
+    bool verbose = false;
+    bool rand_position = true;
+    int num_agents = 16;
+};
+
+void process_args(int argc, char **argv, CommandLineParams &p);
 
 #endif

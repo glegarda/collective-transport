@@ -22,37 +22,32 @@ std::string bt_exp = R"(
 </root>
 )";
 
+
+CommandLineParams g_cmd;
+
 int main(int argc, char* argv[])
 {
 	// Process input arguments
-	if (argc < 2 || argc > 4)
-	{
-		std::cout << "Incorrect call. Format is\n"
-		          << "    ./sim <path_to_xml_file> [duration=3600] [render=1]"
-		          << std::endl;
-		return -1;
-	}
+    process_args(argc, argv, g_cmd);
 
-	// Controller
-	std::ifstream ifs(argv[1]);
-	std::string bt((std::istreambuf_iterator<char>(ifs)),
-	               (std::istreambuf_iterator<char>()   ));
+	// Set up controller
+    std::string bt;
+    if (g_cmd.treefile.size())
+    {
+        std::ifstream ifs(g_cmd.treefile);
+        std::string _bt((std::istreambuf_iterator<char>(ifs)),
+                       (std::istreambuf_iterator<char>()   ));
+        bt = _bt;
+    }
+    else
+        bt = bt_exp;
 
-	// Duration and render
-	unsigned long long t_sim = 3600;
-	bool render = true;
-	if (argc > 2)
-	{
-		t_sim = std::atoll(argv[2]);
-
-		if (argc > 3)
-		{
-			render = std::atoi(argv[3]);
-		}
-	}
-
-	// Initialise environment
-	Environment env;
+    
+    // Initialise environment
+    Environment env(g_cmd);
+    
+	// Duration
+	unsigned long long t_sim = g_cmd.simtime * env.p_f_sim;
 	
 	env.addArena();
 
@@ -65,43 +60,39 @@ int main(int argc, char* argv[])
 	env.addLoad(b2Vec2(-1.5f,  1.25f), 2);
 	env.addLoad(b2Vec2(-1.5f,  0.00f), 2);
 	env.addLoad(b2Vec2(-1.5f, -1.25f), 2);
-
-	env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
-	env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
-
+    
+    if (g_cmd.rand_position)
+    {
+        env.addRandomRobots();
+    }
+    else
+    {
+        env.addRobot(b2Vec2(2.225f,  0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(2.225f,  0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(2.225f, -0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(2.225f, -0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.825f,  0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.825f,  0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.825f, -0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.825f, -0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.425f,  0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.425f,  0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.425f, -0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.425f, -0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.025f,  0.600f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.025f,  0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.025f, -0.200f), rndf(-M_PI, M_PI));
+        env.addRobot(b2Vec2(1.025f, -0.600f), rndf(-M_PI, M_PI));
+    }
+    
 	Robot* robot = nullptr;
-	// Initial exploration
-	while (robot = env.getNextRobot())
-	{
-		robot->controller.xml_tree = bt_exp;
-		robot->controller.updateSource();
-	}
-
-	float null_fitness = env.run(300);
-
-	// Set controllers of all the robots in the environment
-	while (robot = env.getNextRobot())
+	while ((robot = env.getNextRobot()))
 	{
 		robot->controller.xml_tree = bt;
 		robot->controller.updateSource();
 	}
 
-	// Run simulation and compute controller fitness
-	env.render = render;
+    // Run for 
 	float fitness = env.run(t_sim);
 
 	std::cout << fitness << std::endl;
