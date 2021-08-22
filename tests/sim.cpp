@@ -56,6 +56,12 @@ int main(int argc, char* argv[])
 	
 	env.addArena();
 
+/*
+	env.addLoad(b2Vec2(0.0f, 0.0f), 2);
+	env.addRobot(b2Vec2(0.05f, -0.500f), M_PI_2);
+	env.addRobot(b2Vec2(-0.05f, 1.000f), -M_PI_2);
+*/
+
 	env.addLoad(b2Vec2(-1.5f,  1.25f), 2);
 	env.addLoad(b2Vec2(-1.5f,  0.00f), 2);
 	env.addLoad(b2Vec2(-1.5f, -1.25f), 2);

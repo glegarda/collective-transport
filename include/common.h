@@ -74,8 +74,6 @@ struct RobotConstants
 	float v_max;
 	float density; // of a disc
 	float friction;
-	float uw_max;
-	float ut_max;
 	float restitution;
 	// Laser TOF distance sensors
 	float prox_angles[16];

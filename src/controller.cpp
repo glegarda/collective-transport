@@ -188,7 +188,7 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	VectorPolar v_home;
 	if (scene.nest)
 	{
-		float d_nest = scene.rb_nest.r - g_ac.nest_r + 2.0f * g_rc.radius + 0.1f;
+		float d_nest = scene.rb_nest.r - g_ac.nest_r + g_rc.radius + 0.05f;
 		if (d_nest < 0.0f)
 		{
 			d_nest = 0.0f;
@@ -209,7 +209,6 @@ void Controller::updateBB(const Scene& scene, const Message& message,
 	if (scene.load)
 	{
 		v_lift = scene.rb_lift;
-		v_lift.r += 0.05;
 		v_lift.rotate(scene.orientation - scene.heading);
 	}
 	else

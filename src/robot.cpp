@@ -4,6 +4,7 @@ Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
 	p_pid_v(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	p_pid_vn(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	platform_up(false),
+	wait_count(0),
 	p_v_wheels(0.0f, 0.0f, 0.0f),
 	p_pcam(nullptr),
 	p_joint(nullptr),
@@ -179,6 +180,7 @@ float Robot::getHeading()
 void Robot::setMessage()
 {
 	// Set load ID from sensing
+	// Robot is ready to lift if its centre is inside the marker
 	if (scene.rb_lift.r < g_lc.marker_w / 2.0f)
 	{
 		message.id_load = scene.id_load;

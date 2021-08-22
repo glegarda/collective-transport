@@ -29,8 +29,8 @@ class Robot : public SimObject
 		std::vector<Message> comms;
 		Scene scene;
 		bool platform_up;
+		unsigned short wait_count;
 	private:
-		void applyFriction();
 		b2Vec3 holonomicFK3(const b2Vec3& v_wheels);
 		b2Vec3 holonomicIK3(const b2Vec3& v_local);
 		void addPlatformCamera();

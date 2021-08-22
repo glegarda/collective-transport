@@ -538,7 +538,7 @@ class Ifsect : public ConditionNode
 
 			if (hw == 0)
 			{
-				if (v.r >= 0.1f)
+				if (v.r >= 0.05f)
 				{
 					return NodeStatus::FAILURE;
 				}
@@ -546,41 +546,10 @@ class Ifsect : public ConditionNode
 			else
 			{
 				VectorPolar v_diff = VectorPolar(v.r, v.a - center);
-				if (v.r < 0.1f || std::abs(v_diff.a) > hw)
+				if (v.r < 0.05f || std::abs(v_diff.a) > hw)
 				{
 					return NodeStatus::FAILURE;
 				}
-
-/*
-				float high_lim = center + hw;
-				float low_lim = center - hw;
-
-				if (high_lim >= M_PI)
-				{
-					if (!(v.a >= low_lim && v.a <= high_lim) &&
-					    !(v.a >= (low_lim - 2.0f * M_PI) &&
-					      v.a <= (high_lim - 2.0f * M_PI)))
-					{
-						return NodeStatus::FAILURE;
-					}
-				}
-				else if (low_lim < -M_PI)
-				{
-					if (!(v.a >= low_lim && v.a <= high_lim) &&
-					    !(v.a >= (low_lim + 2.0f * M_PI) &&
-					      v.a <= (high_lim + 2.0f * M_PI)))
-					{
-						return NodeStatus::FAILURE;
-					}
-				}
-				else
-				{
-					if (!(v.a >= low_lim && v.a <= high_lim))
-					{
-						return NodeStatus::FAILURE;
-					}
-				}
-*/
 			}
 
 			return NodeStatus::SUCCESS;

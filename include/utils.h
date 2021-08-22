@@ -7,8 +7,6 @@
 #include <vector>
 #include <box2d/box2d.h>
 
-#define M_EPSILON 0.001
-
 using sclock = std::chrono::steady_clock;
 using sctime = std::chrono::time_point<std::chrono::steady_clock>;
 

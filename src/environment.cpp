@@ -469,6 +469,9 @@ void Environment::act()
 		float p_goal = robot->message.p_vote;
 		if (p_goal == 0.0f)
 		{
+			// Reset wait counter
+			robot->wait_count = 0;
+
 			// Wheels
 			VectorPolar v_goal = robot->message.v_vote;
 
@@ -478,8 +481,17 @@ void Environment::act()
 		}
 		else
 		{
-			// Stop the wheels
+			// Wait 1s for the wheels to stop before actuating the platform
 			robot->setVelocity(VectorPolar(0.0f, 0.0f));
+
+			if (robot->wait_count++ == std::round(1.0f / g_rc.t_control))
+			{
+				robot->wait_count = 0;
+			}
+			else
+			{
+				continue;
+			}
 
 			// Platform
 			if (p_goal < 0.0f && robot->platform_up)
