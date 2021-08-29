@@ -134,7 +134,8 @@ struct RobotConstants
 		cam_min(0.0),
 		pcam_fov_h(2.0944),
 		pcam_fov_v(1.5708),
-		comms_range(0.2),
+		// GLH set to 1.0 to work (hardware: 0.2)
+		comms_range(1.0),
         ltof_fixture(true),
         ltof_fov(0.40),
         ltof_max(0.15)

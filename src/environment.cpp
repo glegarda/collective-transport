@@ -17,8 +17,6 @@ ArenaConstants g_ac;
 SimParams g_sp;
 
 
-
-
 Environment::Environment(CommandLineParams &g_cmd) :
     render(g_cmd.gui),
 	p_world(new b2World(b2Vec2(0.0f, 0.0f))),
@@ -102,9 +100,11 @@ void Environment::addRandomRobots()
     }
 }
 
-void Environment::addLoad(const b2Vec2& position, unsigned short porters)
+void Environment::addLoad(const b2Vec2& position, unsigned short porters,
+	                      float dx_init)
 {
-	std::unique_ptr<Load> l = std::make_unique<Load>(p_world, position, porters);
+	std::unique_ptr<Load> l = std::make_unique<Load>(p_world, position, porters,
+	                                                 dx_init);
 	p_loads.push_back(std::move(l));
 }
 
@@ -131,9 +131,6 @@ void Environment::updateFitness()
     // Increment load times
     for (auto& load : p_loads)
     {
-        // Lifetime
-        load->t_life++;
-
         // Time with lifting points covered
         unsigned short id = load->getBodyData().id;
         for (const auto& robot : p_robots)
@@ -158,8 +155,7 @@ float Environment::finalFitness()
         // Displacement
         float x_init = load->getStartPosition().x;
         float x_final = load->getBody()->GetPosition().x;
-        float t_life_si = static_cast<float>(load->t_life) / p_f_sim;
-        load_velocity += (x_final - x_init) / (t_life_si * g_rc.v_max);
+        load_velocity += (x_final - x_init + load->dx) / (g_cmd.simtime * g_rc.v_max);
         
         // Penalise never being lifted
         if (!load->lifted)
@@ -176,7 +172,7 @@ float Environment::finalFitness()
         // Lifting point coverage
         float t_coverf = static_cast<float>(load->t_cover);
         float norm_t_coverf = t_coverf / load->getPorters();
-        load_coverage += norm_t_coverf / load->t_life;
+        load_coverage += norm_t_coverf / (g_cmd.simtime * p_f_sim);
     }
     
     p_fitness = load_velocity + load_coverage + load_actions;
@@ -224,6 +220,7 @@ float Environment::run(unsigned long long duration)
             do_logging(i);
             simStep();
             updateFitness();
+			resetLoads();
             g_sp.step = false;
             //printf("Loop %5u time %f\r", i, g_sp.model_time);
             i++;
@@ -240,7 +237,6 @@ float Environment::run(unsigned long long duration)
 
 	return finalFitness();
 }
-
 
 void Environment::simStep()
 {
@@ -260,8 +256,6 @@ void Environment::simStep()
     }
 }
 
-
-
 // Removes a load from the world
 void Environment::destroyLoad(Load* load)
 {
@@ -269,21 +263,22 @@ void Environment::destroyLoad(Load* load)
 }
 
 // Generates an equal load at the original position
-//  -> NOT USED
-void Environment::resetLoad(unsigned short id)
+void Environment::resetLoads()
 {
-	b2Vec2 position;
-	unsigned short porters;
+	std::vector<b2Vec2> positions;
+	std::vector<unsigned short> porters;
+	std::vector<float> dx_final;
 
 	for (auto it = p_loads.begin(); it != p_loads.end();)
 	{
-		unsigned short l_id = it->get()->getBodyData().id;
-		if (id == l_id)
+		if (it->get()->reset)
 		{
-			position = it->get()->getStartPosition();
-			porters = it->get()->getPorters();
-
-			// Update fitness. Reset called only if load at nest
+			// Store relevant data
+			positions.push_back(it->get()->getStartPosition());
+			porters.push_back(it->get()->getPorters());
+        	float x_init = it->get()->getStartPosition().x;
+			float x_final = it->get()->getBody()->GetPosition().x;
+        	dx_final.push_back(x_final - x_init + it->get()->dx);
 
 			// Remove load from current position
 			destroyLoad(it->get());
@@ -297,8 +292,11 @@ void Environment::resetLoad(unsigned short id)
 		}
 	}
 
-	// Create new load
-	addLoad(position, porters);
+	// Create new loads
+	for (int i = 0; i < positions.size(); ++i)
+	{
+		addLoad(positions.at(i), porters.at(i), dx_final.at(i));
+	}
 }
 
 
@@ -830,9 +828,6 @@ void Environment::commsIn()
 // Act on every robot according to the output of the control step
 void Environment::act()
 {
-	// ID of loads placed at nest
-	std::vector<unsigned short> load_id;
-
 	for (auto& robot : p_robots)
 	{
 		float p_goal = robot->message.p_vote;
@@ -875,27 +870,15 @@ void Environment::act()
 					if (load->getBodyData().id == tmp_id)
 					{
 						load->lowered = true;
-						break;
-					}
-				}
 
-				// If any of the robots are at the nest, add load to list
-				if (robot->scene.rb_nest.r > 0.0f &&
-				    robot->scene.rb_nest.r < g_ac.nest_r)
-				{
-					bool exists = false;
-					for (const auto& id : load_id)
-					{
-						if (id == tmp_id)
+						// If robot is at nest, reset load
+						if (robot->scene.rb_nest.r > 0.0f &&
+						    robot->scene.rb_nest.r < g_ac.nest_r)
 						{
-							exists = true;
-							break;
+							load->reset = true;
 						}
-					}
 
-					if (!exists)
-					{
-						load_id.push_back(tmp_id);
+						break;
 					}
 				}
 			}
@@ -916,45 +899,6 @@ void Environment::act()
 			}
 		}
 	}
-
-	// Reset/Delete loads placed at nest
-    // SJ removed for now to make sure fitness only calculated in one place
-//	for (const auto& id : load_id)
-//	{
-//		//resetLoad(id);
-//
-//		for (auto it = p_loads.begin(); it != p_loads.end();)
-//		{
-//			unsigned short l_id = it->get()->getBodyData().id;
-//			if (id == l_id)
-//			{
-//				// Update fitness:
-//				// Displacement
-//				float x_init = it->get()->getStartPosition().x;
-//				float x_final = it->get()->getBody()->GetPosition().x;
-//				float t_life_si = static_cast<float>(it->get()->t_life) / p_f_sim;
-//				p_fitness += (x_final - x_init) / (t_life_si * g_rc.v_max);
-//
-//				// Lifting point coverage
-//				float t_coverf = static_cast<float>(it->get()->t_cover);
-//				float norm_t_coverf = t_coverf / it->get()->getPorters();
-//				p_fitness += norm_t_coverf / it->get()->t_life;
-//
-//				// Reward being lowered
-//				p_fitness += 1.0f;
-//
-//				// Remove load from current position
-//				destroyLoad(it->get());
-//				it = p_loads.erase(it);
-//
-//				break;
-//			}
-//			else
-//			{
-//				++it;
-//			}
-//		}
-//	}
 }
 
 void Environment::renderSetup()

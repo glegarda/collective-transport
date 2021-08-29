@@ -3,8 +3,9 @@
 #include <stdexcept>
 #include "load.h"
 
-Load::Load(b2World* world, const b2Vec2& position, unsigned short porters) :
-	t_life(0), t_cover(0), lifted(false), lowered(false),
+Load::Load(b2World* world, const b2Vec2& position, unsigned short porters,
+	       float dx_init) :
+	t_cover(0), lifted(false), lowered(false), reset(false), dx(dx_init),
 	p_start_position(position), p_porters(porters)
 {
 	// Set body and fixture data

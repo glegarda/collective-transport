@@ -30,6 +30,7 @@ class Robot : public SimObject
 		std::vector<Message> comms;
 		Scene scene;
 		bool platform_up;
+		unsigned short wait_count;
 		void aquired_entity(uintptr_t e, b2Fixture *sf, b2Fixture *df);
 		void lost_entity(uintptr_t e, b2Fixture *sf, b2Fixture *df);
 		std::vector<SensorData> visible_entities;

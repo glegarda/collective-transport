@@ -6,17 +6,19 @@
 class Load : public SimObject
 {
 	public:
-		Load(b2World* world, const b2Vec2& position, unsigned short porters);
+		Load(b2World* world, const b2Vec2& position, unsigned short porters,
+		     float dx_init);
 		~Load();
 
 		void destroy(b2World* world);
 		unsigned short getPorters();
 		b2Vec2 getStartPosition();
 
-		unsigned long long t_life;
 		unsigned long long t_cover;
 		bool lifted;
 		bool lowered;
+		bool reset;
+		float dx;
 
 	private:
 		unsigned short p_porters;

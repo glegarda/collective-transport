@@ -35,7 +35,7 @@ public:
     
     void addArena();
     void addRobot(const b2Vec2& position, float angle);
-    void addLoad(const b2Vec2& position, unsigned short porters);
+    void addLoad(const b2Vec2& position, unsigned short porters, float dx_init);
     Robot* getNextRobot();
     float run(unsigned long long duration);
     void addRandomRobots();
@@ -51,7 +51,7 @@ private:
     friend class Load;
     
     void destroyLoad(Load* load);
-    void resetLoad(unsigned short id);
+    void resetLoads();
     
     void sense();
     void commsOut();

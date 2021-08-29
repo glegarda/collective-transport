@@ -22,7 +22,7 @@ struct EvoParams
 {
 	unsigned long long t_sim = 3600; // 2 minutes
 	unsigned long long t_exp = 300; // 10 seconds
-	unsigned int population = 20; // 20
+	unsigned int population = 20;
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
 	unsigned short n_evals = 4;
@@ -682,9 +682,9 @@ bool eval_solution(const GPTree& gpt, GPMiddleCost& gpmc)
 		
 		env.addArena();
 
-		env.addLoad(b2Vec2(-1.5f,  1.25f), 2);
-		env.addLoad(b2Vec2(-1.5f,  0.00f), 2);
-		env.addLoad(b2Vec2(-1.5f, -1.25f), 2);
+		env.addLoad(b2Vec2(-1.5f,  1.25f), 2, 0.0f);
+		env.addLoad(b2Vec2(-1.5f,  0.00f), 2, 0.0f);
+		env.addLoad(b2Vec2(-1.5f, -1.25f), 2, 0.0f);
 		
 		if (g_cmd.rand_position)
 		{
