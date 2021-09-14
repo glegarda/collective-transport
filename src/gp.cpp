@@ -78,24 +78,30 @@ struct ExecutionXML {
 	<!----------------->
 	)";
 
-	std::string home = R"(
-	<!-- HOME -->
-	<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
-	<!---------->
+	std::string place = R"(
+	<!-- PLACE -->
+	<ReactiveFallback>
+		<ReactiveSequence>
+			<Ifsect arg0="{vhome}" arg1="0" arg2="0"/>
+			<Movcs arg0="{pvote}" arg1="-128"/>
+		</ReactiveSequence>
+		<Mulav arg0="{vvote}" arg1="{vhome}" arg2="-5.000" arg3="{vprox}"/>
+	</ReactiveFallback>
+	<!----------->
 	)";
 	
-	std::string position = R"(
-	<!-- POSITION -->
-	<Mulav arg0="{vvote}" arg1="{vlift}" arg2="-5.000" arg3="{vprox}"/>
+	std::string pick = R"(
+	<!-- PICK -->
+	<ReactiveFallback>
+		<ReactiveSequence>
+			<Ifsect arg0="{vlift}" arg1="0" arg2="0"/>
+			<Movcs arg0="{pvote}" arg1="127"/>
+		</ReactiveSequence>
+		<Mulav arg0="{vvote}" arg1="{vlift}" arg2="-5.000" arg3="{vprox}"/>
+	</ReactiveFallback>
 	<!---------->
 	)";
 
-	std::string platform = R"(
-	<!-- PLATFORM -->
-	<Movcs arg0="{pvote}" arg1="%s"/>
-	<!-------------->
-	)";
-	
 	// Obstacle avoidance as fixed behaviour
 	std::string avoidance = R"(
 	<!-- AVOIDANCE -->
@@ -118,26 +124,6 @@ struct ExecutionXML {
 	<!-- RECRUITER -->
 	<Ifprob arg0="{sr}" arg1="%s" arg2="%s"/>
 	<!--------------->
-	)";
-
-	std::string wait = R"(
-	<!-- WAIT -->
-	<ReactiveSequence>
-		<Ifsect arg0="{vlift}" arg1="0" arg2="0"/>
-		<Ifprob arg0="{sp}" arg1="-15.000" arg2="0.500"/>
-		<Ifprob arg0="{szero}" arg1="-0.250" arg2="%s"/>
-	</ReactiveSequence>
-	<!---------->
-	)";
-	
-	std::string ready = R"(
-	<!-- READY -->
-	<ReactiveSequence>
-		<Ifsect arg0="{vlift}" arg1="0" arg2="0"/>
-		<Ifprob arg0="{sp}" arg1="15.000" arg2="0.500"/>
-		<Ifprob arg0="{szero}" arg1="-0.250" arg2="%s"/>
-	</ReactiveSequence>
-	<!----------->
 	)";
 
 	std::string porter = R"(
@@ -178,15 +164,6 @@ struct ExecutionXML {
 		<Ifprob arg0="{szero}" arg1="-0.250" arg2="%s"/>
 	</ReactiveSequence>
 	<!--------------->
-	)";
-
-	std::string group = R"(
-	<!-- GROUP -->
-	<ReactiveSequence>
-		<Ifprob arg0="{sp}" arg1="15.000" arg2="0.500"/>
-		<Ifprob arg0="{szero}" arg1="-0.250" arg2="%s"/>
-	</ReactiveSequence>
-	<!----------->
 	)";
 
 	std::string fixedprob = R"(
@@ -360,21 +337,17 @@ enum NodeID
 	// Execution (conditions)
 	NEIGHBOUR,
 	RECRUITER,
-	WAIT,
-	READY,
 	PORTER,
 	NEST,
 	ITEM,
-	//LIFTPOINT,
-	//GROUP,
+	LIFTPOINT,
 	FIXEDPROB,
 	// Execution (behaviours)
 	EXPLORE,
 	ATTRACT,
 	RECRUIT,
-	HOME,
-	POSITION,
-	PLATFORM
+	PLACE,
+	PICK
 };
 typedef enum NodeID NodeID; 
 
@@ -433,21 +406,17 @@ std::map<NodeID, GPNode> execution_set
 	// Conditions
 	{NEIGHBOUR, {"Neighbour", 0, 0, {{FP53, 0.0f}, {FP53, 0.0f}}, ExecutionXML.neighbour}},
 	{RECRUITER, {"Recruiter", 0, 0, {{FP53, 0.0f}, {FP53, 0.0f}}, ExecutionXML.recruiter}},
-	{WAIT,      {"Wait",      0, 0, {{FP53, 0.0f}},               ExecutionXML.wait     }},
-	{READY,     {"Ready",     0, 0, {{FP53, 0.0f}},               ExecutionXML.ready    }},
 	{PORTER,    {"Porter",    0, 0, {{FP53, 0.0f}},               ExecutionXML.porter   }},
 	{NEST,      {"Nest",      0, 0, {{FP53, 0.0f}},               ExecutionXML.nest     }},
 	{ITEM,      {"Item",      0, 0, {{FP53, 0.0f}},               ExecutionXML.item     }},
-	//{LIFTPOINT, {"Liftpoint", 0, 0, {{FP53, 0.0f}},               ExecutionXML.liftpoint}},
-	//{GROUP,     {"Group",     0, 0, {{FP53, 0.0f}},               ExecutionXML.group    }},
+	{LIFTPOINT, {"Liftpoint", 0, 0, {{FP53, 0.0f}},               ExecutionXML.liftpoint}},
 	{FIXEDPROB, {"Fixedprob", 0, 0, {{FP53, 0.0f}},               ExecutionXML.fixedprob}},
 	// Behaviours
 	{EXPLORE,  {"Explore",  0, 0, {},               ExecutionXML.exploration}},
 	{ATTRACT,  {"Attract",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.attraction }},
 	{RECRUIT,  {"Recruit",  0, 0, {{FLOAT5, 0.0f}}, ExecutionXML.recruitment}},
-	{HOME,     {"Home",     0, 0, {},               ExecutionXML.home       }},
-	{POSITION, {"Position", 0, 0, {},               ExecutionXML.position   }},
-	{PLATFORM, {"Platform", 0, 0, {{CHAR, 0.0f}},   ExecutionXML.platform   }}
+	{PLACE,    {"Place",    0, 0, {},               ExecutionXML.place      }},
+	{PICK,     {"Pick",     0, 0, {},               ExecutionXML.pick       }}
 };
 
 std::map<NodeID, GPNode>::size_type cfs_size = control_flow_set.size();
@@ -637,7 +606,7 @@ void init_genes(GPTree& gpt,
 	// Ramped half-and-half
 	static unsigned int tree_counter = 0;
 	unsigned short range = EvoParams.max_max_depth - EvoParams.min_max_depth + 1;
-	static unsigned short max_depth = EvoParams.min_max_depth + 1;
+	static unsigned short max_depth = EvoParams.min_max_depth;
 
 	if (tree_counter % (EvoParams.population / range) == 0 && tree_counter != 0)
 	{
@@ -1017,7 +986,7 @@ int main(int argc, char* argv[])
 	ga_obj.idle_delay_us = 1; // switch between threads quickly
 	ga_obj.verbose = g_cmd.verbose;
 	ga_obj.population = EvoParams.population;
-	ga_obj.generation_max = 5000;
+	ga_obj.generation_max = 100;
 	ga_obj.calculate_parsimony_coefficient = calculate_parsimony_coefficient;
 	ga_obj.calculate_SO_total_fitness = calculate_SO_total_fitness;
 	ga_obj.init_genes = init_genes;
@@ -1036,7 +1005,7 @@ int main(int argc, char* argv[])
 	std::time_t current_time = std::chrono::system_clock::to_time_t(current);
 	output_file << "**************************************************\n"
 	            << std::ctime(&current_time) << "\n"
-	            << "Number of robots: " << "16\n"
+	            << "Number of robots: " << g_cmd.num_agents << "\n"
 	            << "Number of loads: " << "3, 2-porters\n"
 	            << "Population: " << EvoParams.population << "\n"
 	            << "Generations: " << ga_obj.generation_max << "\n"
