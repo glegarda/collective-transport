@@ -45,6 +45,7 @@ class VectorPolar {
 float rndf(float fmin, float fmax);
 int rndi(int imin, int imax);
 float rndif(int imin, int imax);
+float rndnd(float mean, float sdev);
 
 // Vector mean and covariance (for numeric data types)
 template<typename T>

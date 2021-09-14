@@ -141,6 +141,14 @@ float rndif(int imin, int imax)
     std::uniform_int_distribution<int> dis(imin, imax);
     return static_cast<float>(dis(gen));
 }
+
+// Random float generator from normal distribution
+float rndnd(float mean, float sdev)
+{
+	std::normal_distribution<float> dis(mean, sdev);
+	return dis(gen);
+}
+
 void seed(int seed)
 {
     gen.seed(seed);

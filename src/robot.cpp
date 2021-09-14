@@ -1,6 +1,7 @@
 #include "robot.h"
 
 Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
+	p_sdev(0.02),
 	p_pid_v(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	p_pid_vn(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	platform_up(false),
@@ -180,15 +181,16 @@ void Robot::setVelocity(const VectorPolar& v_local)
 	b2Vec3 v_goal_b2 = b2Vec3(v_goal.r * std::cos(v_goal.a),
 	                          v_goal.r * std::sin(v_goal.a),
 	                          0.0f);
-	p_v_wheels = holonomicIK3(v_goal_b2);
+	b2Vec3 p_v_wheels = holonomicIK3(v_goal_b2);
 
 	// Holonomic robot, so use PID to set the velocity
 	b2Vec2 v_ref = v_goal.to_b2Vec2();
 	b2Vec2 v_global = p_body->GetLinearVelocity();
 	b2Vec2 v_meas = p_body->GetLocalVector(v_global);
 
-	float f_forward = p_pid_v.update(v_ref.x, v_meas.x);
-	float f_normal = p_pid_vn.update(v_ref.y, v_meas.y);
+	// Add white noise
+	float f_forward = rndnd(p_pid_v.update(v_ref.x, v_meas.x), p_sdev);
+	float f_normal = rndnd(p_pid_vn.update(v_ref.y, v_meas.y), p_sdev);
 	b2Vec2 fg = p_body->GetWorldVector(b2Vec2(f_forward, f_normal));
 
 	p_body->ApplyForceToCenter(fg, true);

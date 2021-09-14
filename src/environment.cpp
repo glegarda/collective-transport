@@ -147,7 +147,7 @@ void Environment::updateFitness()
 float Environment::finalFitness()
 {
     // Update fitness
-    float load_velocity = 0;
+    float load_displacement = 0;
     float load_coverage = 0;
     float load_actions = 0;
     for (const auto& load : p_loads)
@@ -155,29 +155,39 @@ float Environment::finalFitness()
         // Displacement
         float x_init = load->getStartPosition().x;
         float x_final = load->getBody()->GetPosition().x;
-        load_velocity += (x_final - x_init + load->dx) / (g_cmd.simtime * g_rc.v_max);
-        
-        // Penalise never being lifted
+        float load_displacement_tmp = (x_final - x_init + load->dx);
+
+	if (load_displacement_tmp > 0.0f)
+	{
+		load_displacement += load_displacement_tmp;
+	}
+
+/*
+        // Penalise not being lifted
         if (!load->lifted)
         {
             load_actions -= 1.0f;
         }
         
-        // Reward begin lowered
-        if (load->lowered)
+        // Penalise not being lowered
+        if (!load->lowered)
         {
-            load_actions += 1.0f;
+            load_actions -= 1.0f;
         }
         
         // Lifting point coverage
         float t_coverf = static_cast<float>(load->t_cover);
         float norm_t_coverf = t_coverf / load->getPorters();
         load_coverage += norm_t_coverf / (g_cmd.simtime * p_f_sim);
+*/
     }
     
-    p_fitness = load_velocity + load_coverage + load_actions;
+	load_displacement /= (p_loads.size() * g_cmd.simtime * g_rc.v_max); 
+    p_fitness = load_displacement + load_coverage + load_actions;
     if (g_cmd.verbose)
-        printf("% 8f % 8f % 8f % 8f\n", load_velocity, load_coverage, load_actions, p_fitness);
+    {
+        printf("% 8f % 8f % 8f % 8f\n", load_displacement, load_coverage, load_actions, p_fitness);
+    }
 
     return p_fitness;
 }

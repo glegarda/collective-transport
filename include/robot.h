@@ -41,6 +41,7 @@ class Robot : public SimObject
 		void addPlatformCamera();
 		void removePlatformCamera();
 	
+		float p_sdev;
 		PID p_pid_v;
 		PID p_pid_vn;
 		b2Vec3 p_v_wheels;
