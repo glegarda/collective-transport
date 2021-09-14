@@ -312,6 +312,9 @@ public:
 	bool verbose;
 	int generation_step;
 	int elite_count;
+	//========== GLH ==========//
+	int antielite_count;
+	//=========================//
 	int generation_max;
 	double tol_stall_average;
 	int average_stall_max;
@@ -336,6 +339,9 @@ public:
 	function<vector<double>(thisChromosomeType&)> calculate_MO_objectives;
 	function<vector<double>(const vector<double>&)> distribution_objective_reductions;
 	function<void(GeneType&,const function<double(void)> &rnd01)> init_genes;
+	//========== GLH ==========//
+	function<void(GeneType&,const function<double(void)> &rnd01)> rand_genes;
+	//=========================//
 	function<bool(const GeneType&,MiddleCostType&)> eval_solution;
 	function<bool(const GeneType&,MiddleCostType&,const thisGenerationType&)> eval_solution_IGA;
 	function<GeneType(const GeneType&,const function<double(void)> &rnd01,double shrink_scale)> mutate;
@@ -359,6 +365,9 @@ public:
 		verbose(false),
 		generation_step(-1),
 		elite_count(5),
+		//========== GLH ==========//
+		antielite_count(0),
+		//=========================//
 		generation_max(100),
 		tol_stall_average(1e-4),
 		average_stall_max(10),
@@ -380,6 +389,9 @@ public:
 		calculate_MO_objectives(nullptr),
 		distribution_objective_reductions(nullptr),
 		init_genes(nullptr),
+		//========== GLH ==========//
+		rand_genes(nullptr),
+		//=========================//
 		eval_solution(nullptr),
 		eval_solution_IGA(nullptr),
 		mutate(nullptr),
@@ -499,6 +511,14 @@ public:
 		select_population(new_generation,selected_generation);
 		new_generation=selected_generation;
 		rank_population(new_generation); // used for elite tranfre, crossover and mutation
+		//========== GLH ==========//
+		// Introduce antielitism
+		thisGenerationType antielite_generation;
+		antielitism(new_generation,antielite_generation);
+		new_generation=antielite_generation;
+		finalize_objectives(new_generation);
+		rank_population(new_generation);
+		//=========================//
 		finalize_generation(new_generation);
 		new_generation.exe_time=timer.toc();
 
@@ -711,6 +731,10 @@ protected:
 
 		if(init_genes==nullptr)
 			throw runtime_error("init_genes is not adjusted.");
+		//========== GLH ==========//
+		if(rand_genes==nullptr)
+			throw runtime_error("rand_genes is not adjusted.");
+		//=========================//
 		if(mutate==nullptr)
 			throw runtime_error("mutate is not adjusted.");
 		if(crossover==nullptr)
@@ -1798,6 +1822,89 @@ protected:
 		}
 
 	}
+
+	//========== GLH ==========//
+	// Antielitism replaces the chromosomes with the lowest fitness by randomly
+	// generated ones.
+	// TODO: error checking (e.g. allowed number of antielites), test behaviour
+	// with IGA, MO and different threading options
+
+	void antielitism_range(
+		thisGenerationType *p_new_generation,
+		int x_index_begin,
+		int x_index_end,
+		unsigned int *attemps,
+		std::atomic<bool> &active_thread)
+	{
+		for(int index=x_index_begin;index<=x_index_end;index++)
+		{
+			bool successful=false;
+			while(!successful)
+			{
+				thisChromosomeType X;
+				rand_genes(X.genes,[this](){return random01();});
+
+				if(is_interactive())
+				{
+					if(eval_solution_IGA(X.genes,X.middle_costs,*p_new_generation))
+					{
+						p_new_generation->chromosomes.push_back(X);
+						successful=true;
+					}
+					else
+						(*attemps)++;
+				}
+				else
+				{
+					if(eval_solution(X.genes,X.middle_costs))
+					{
+						if(index>=0)
+							p_new_generation->chromosomes[index]=X;
+						else
+							p_new_generation->chromosomes.push_back(X);
+						successful=true;
+					}
+					else
+						(*attemps)++;
+				}
+			}
+		}
+
+		active_thread=false;
+	}
+
+	void antielitism(const thisGenerationType &g,thisGenerationType &g2)
+	{
+		for(int i=0;i<int(population)-antielite_count;i++)
+		{
+			g2.chromosomes.push_back(g.chromosomes[g.sorted_indices[i]]);
+		}
+
+		unsigned int N_add=(unsigned int)antielite_count;
+		unsigned int total_attempts=0;
+
+		if(!multi_threading || N_threads==1 || is_interactive())
+		{
+			sequential_action<&thisType::antielitism_range>(
+				g2,N_add,total_attempts);
+		}
+		else
+		{
+			if(dynamic_threading)
+			{
+				// Perform the tasks by any available thread
+				dynamic_thread_action<&thisType::antielitism_range>(
+					g2,N_add,total_attempts);
+			}
+			else
+			{
+				// Divide the tasks between threads equally
+				static_thread_action<&thisType::antielitism_range>(
+					g2,N_add,total_attempts);
+			}
+		}
+	}
+	//=========================//
 };
 
 NS_EA_END

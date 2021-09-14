@@ -21,7 +21,6 @@ CommandLineParams g_cmd;
 struct EvoParams
 {
 	unsigned long long t_sim = 3600; // 2 minutes
-	unsigned long long t_exp = 300; // 10 seconds
 	unsigned int population = 20;
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
@@ -627,6 +626,29 @@ void init_genes(GPTree& gpt,
 	// Grow behaviour tree
 	grow_tree(gpt, rnd01, 1);
 	tree_counter++;
+}
+
+void rand_genes(GPTree& gpt,
+                const std::function<double(void)> &rnd01)
+{
+	// Set max depth to random value within original range
+	unsigned short max_depth = rndi(EvoParams.min_max_depth,
+	                                EvoParams.max_max_depth);
+	gpt.max_depth = max_depth;
+
+	// Random full/grow selection
+	gpt.grow = (rnd01() < 0.5) ? true : false;
+
+	// Introduce fixed elements (emergency obstacle avoidance)
+	GPNode root = control_flow_set.at(SEL2);
+	root.depth = 0;
+	gpt.tree.push_back(root);
+
+	GPNode avoidance{"Avoidance", 1, 0, {}, ExecutionXML.avoidance};
+	gpt.tree.push_back(avoidance);
+
+	// Grow behaviour tree
+	grow_tree(gpt, rnd01, 1);
 }
 
 //=============================================================================
