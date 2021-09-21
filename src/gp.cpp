@@ -20,11 +20,11 @@ CommandLineParams g_cmd;
 
 struct EvoParams
 {
-	unsigned long long t_sim = 3600; // 2 minutes
-	unsigned int population = 20;
+	unsigned long long t_sim = 900; // 2 minutes
+	unsigned int population = 5;
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
-	unsigned short n_evals = 4;
+	unsigned short n_evals = 2;
 	// Make sure mutation rate is set to 1.0 in main()
 	float p_inner = 0.9;
 	float p_mut_param = 0.05;
@@ -472,6 +472,7 @@ std::string printMacro(const std::string& macro,
 
 std::string printTree(const GPTree& gpt, std::string tree_id)
 {
+	// TODO: add correct levels of indentation
 	// Header
 	std::string xml = "<root main_tree_to_execute=\"" + tree_id + "\">\n";
 	xml += "<BehaviorTree ID=\"" + tree_id + "\">\n";
@@ -982,6 +983,27 @@ void SO_report_generation(
 //	}
 }
 
+void print_generation(
+	int generation_number,
+	const Generation_Type& last_generation)
+{
+	std::string file_name = "generation_" + std::to_string(generation_number) + "_report.txt";
+	std::ofstream generation_file;
+	generation_file.open(file_name);
+ 
+	int i = 0;
+	for(const auto& c : last_generation.chromosomes)
+	{
+		generation_file
+			<< "==================================================\n"
+			<< "Chromosone [" << i++ << "] "
+			<< "cost [" << c.total_cost << "] "
+			<< "size [" << c.genes.tree.size() << "]\n"
+			<< "--------------------------------------------------\n"
+			<< printTree(c.genes, "MainTree") << "\n";
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	// Process command line args
@@ -1004,21 +1026,25 @@ int main(int argc, char* argv[])
 	GA_Type ga_obj;
 	ga_obj.problem_mode = EA::GA_MODE::SOGA;
 	ga_obj.multi_threading = true;
-	ga_obj.N_threads = 16;
+	ga_obj.N_threads = 4;
 	ga_obj.idle_delay_us = 1; // switch between threads quickly
 	ga_obj.verbose = g_cmd.verbose;
 	ga_obj.population = EvoParams.population;
-	ga_obj.generation_max = 100;
+	ga_obj.generation_max = 5;
 	ga_obj.calculate_parsimony_coefficient = calculate_parsimony_coefficient;
 	ga_obj.calculate_SO_total_fitness = calculate_SO_total_fitness;
 	ga_obj.init_genes = init_genes;
+	ga_obj.rand_genes = rand_genes;
 	ga_obj.eval_solution = eval_solution;
 	ga_obj.mutate = mutate;
 	ga_obj.crossover = crossover;
 	ga_obj.SO_report_generation = SO_report_generation;
+	ga_obj.print_generation = print_generation;
 	ga_obj.average_stall_max = ga_obj.generation_max + 1;
 	ga_obj.best_stall_max = ga_obj.generation_max + 1;
 	ga_obj.elite_count = 3;
+	ga_obj.antielite_count = 3;
+	ga_obj.checkpoints.push_back(2);
 	ga_obj.crossover_fraction = 0.7;
 	ga_obj.mutation_rate = 1.0;
 
@@ -1034,6 +1060,7 @@ int main(int argc, char* argv[])
 	            << "Simulation time: " << (float)EvoParams.t_sim/30.0f << "s\n"
 	            << "Evaluations: " << EvoParams.n_evals << "\n"
 	            << "Elite count: " << ga_obj.elite_count << "\n"
+	            << "Antielite count: " << ga_obj.antielite_count << "\n"
 	            << "Crossover fraction: " << ga_obj.crossover_fraction << "\n"
 	            << "Prob. of inner node selection: " << EvoParams.p_inner << "\n"
 	            << "Prob. of parameter mutation: " << EvoParams.p_mut_param << "\n"

@@ -314,6 +314,7 @@ public:
 	int elite_count;
 	//========== GLH ==========//
 	int antielite_count;
+	vector<int> checkpoints;
 	//=========================//
 	int generation_max;
 	double tol_stall_average;
@@ -348,6 +349,9 @@ public:
 	function<GeneType(const GeneType&,const GeneType&,const function<double(void)> &rnd01)> crossover;
 	function<void(int,const thisGenerationType&,const GeneType&)> SO_report_generation;
 	function<void(int,const thisGenerationType&,const vector<unsigned int>&)> MO_report_generation;
+	//========== GLH ==========//
+	function<void(int,const thisGenerationType&)> print_generation;
+	//=========================//
 	function<void(void)> custom_refresh;
 	function<double(int,const function<double(void)> &rnd01)> get_shrink_scale;
 	vector<thisGenSOAbs> generations_so_abs;
@@ -377,8 +381,8 @@ public:
 		enable_reference_vectors(true),
 		multi_threading(true),
 		dynamic_threading(true),
-		//N_threads(std::thread::hardware_concurrency()),
-		N_threads(std::thread::hardware_concurrency() / 2),
+		N_threads(std::thread::hardware_concurrency()),
+		//N_threads(std::thread::hardware_concurrency() / 2),
 		user_request_stop(false),
 		idle_delay_us(1000),
 		calculate_IGA_total_fitness(nullptr),
@@ -398,6 +402,9 @@ public:
 		crossover(nullptr),
 		SO_report_generation(nullptr),
 		MO_report_generation(nullptr),
+		//========== GLH ==========//
+		print_generation(nullptr),
+		//=========================//
 		custom_refresh(nullptr),
 		get_shrink_scale(default_shrink_scale)
 	{
@@ -537,7 +544,19 @@ public:
 		StopReason stop=StopReason::Undefined;
 		solve_init();
 		while(stop==StopReason::Undefined)
+		{
 			stop=solve_next_generation();
+			//========== GLH ==========//
+			for(const auto& cp : checkpoints)
+			{
+				if(cp==generation_step)
+				{
+					print_generation(cp,last_generation);
+					break;
+				}
+			}
+			//=========================//
+		}
 		show_stop_reason(stop);
 		return stop;
 	}
@@ -703,10 +722,6 @@ protected:
 				throw runtime_error("eval_solution is null!");
 			if(is_single_objective())
 			{
-				//========== GLH ==========//
-				if(calculate_parsimony_coefficient==nullptr)
-					throw runtime_error("calculate_parsimony_coefficient is null in single objective mode!");
-				//=========================//
 				if(calculate_SO_total_fitness==nullptr)
 					throw runtime_error("calculate_SO_total_fitness is null in single objective mode!");
 				if(calculate_MO_objectives!=nullptr)
@@ -731,10 +746,6 @@ protected:
 
 		if(init_genes==nullptr)
 			throw runtime_error("init_genes is not adjusted.");
-		//========== GLH ==========//
-		if(rand_genes==nullptr)
-			throw runtime_error("rand_genes is not adjusted.");
-		//=========================//
 		if(mutate==nullptr)
 			throw runtime_error("mutate is not adjusted.");
 		if(crossover==nullptr)
@@ -757,6 +768,14 @@ protected:
 			if(MO_report_generation==nullptr)
 				throw runtime_error("MO_report_generation is not adjusted while problem mode is multi-objective");
 		}
+		//========== GLH ==========//
+		if(rand_genes==nullptr)
+			throw runtime_error("rand_genes is not adjusted");
+		if(calculate_parsimony_coefficient==nullptr)
+			throw runtime_error("calculate_parsimony_coefficient is not adjusted");
+		if(print_generation==nullptr)
+			throw runtime_error("print_generation is not adjusted");
+		//=========================//
 	}
 
 	void select_population(const thisGenerationType &g,thisGenerationType &g2)
