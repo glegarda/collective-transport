@@ -181,7 +181,7 @@ void Robot::setVelocity(const VectorPolar& v_local)
 	b2Vec3 v_goal_b2 = b2Vec3(v_goal.r * std::cos(v_goal.a),
 	                          v_goal.r * std::sin(v_goal.a),
 	                          0.0f);
-	b2Vec3 p_v_wheels = holonomicIK3(v_goal_b2);
+	p_v_wheels = holonomicIK3(v_goal_b2);
 
 	// Holonomic robot, so use PID to set the velocity
 	b2Vec2 v_ref = v_goal.to_b2Vec2();

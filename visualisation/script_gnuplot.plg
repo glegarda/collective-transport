@@ -1,0 +1,2 @@
+plot "data.txt" u 1:3 title 'Average' w lp, "" u 1:2 title 'Best' w lp
+pause -1
