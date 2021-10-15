@@ -855,10 +855,16 @@ void Environment::act()
 		}
 		else
 		{
-			// Wait 1s for the wheels to stop before actuating the platform
 			robot->setVelocity(VectorPolar(0.0f, 0.0f));
 
-			if (robot->wait_count++ == std::round(1.0f / g_rc.t_control))
+			// If the robot is in a group, wait 1s for the wheels to stop
+			// before actuating the platform
+			if (robot->message.id_group != 0)
+			{
+				robot->wait_count++;
+			}
+
+			if (robot->wait_count == std::round(1.0f / g_rc.t_control))
 			{
 				robot->wait_count = 0;
 			}

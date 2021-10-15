@@ -306,7 +306,7 @@ void Robot::processComms()
 
 				if (ready_count < scene.porters)
 				{
-					message.id_group = scene.id_load;
+					message.id_group = 0;
 				}
 			}
 		}
