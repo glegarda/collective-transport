@@ -1,7 +1,7 @@
 #include "robot.h"
 
 Robot::Robot(b2World* world, const b2Vec2& position, float angle) :
-	p_sdev(0.02),
+	p_sdev(0.05),
 	p_pid_v(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	p_pid_vn(30.0f, 0.0f, 0.0f, g_rc.t_control, ""),
 	platform_up(false),

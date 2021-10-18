@@ -252,7 +252,7 @@ void Environment::simStep()
 {
     // Run one physics step, then, if necessary, run controller
     p_world->Step(1.0f / p_f_sim, g_cmd.vi, g_cmd.pi);
-    if (loop % physics_per_ctrl == 0)
+    if (loop++ % physics_per_ctrl == 0)
     {
         sctime start = sclock::now();
         sense();

@@ -319,7 +319,7 @@ class Mulav : public CoroActionNode
 			// Check that vote has not been already cast
 			const NodeConfiguration config = this->config();
 			auto entry = config.output_ports.find("arg0");
-			if (entry->second == "{pvote}")
+			if (entry->second == "{vvote}")
 			{
 				if (*(_voted.get()))
 				{
