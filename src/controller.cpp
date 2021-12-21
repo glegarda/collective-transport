@@ -98,6 +98,10 @@ void Controller::updateSource()
 	p_tree.rootBlackboard()->set("sr", 0.0f);
 	p_tree.rootBlackboard()->set("sp", 0.0f);
 
+	int rnd_int = rndi(0, 65536);
+	std::string log_name = "bt_trace_" + std::to_string(rnd_int) + ".fbl";
+	p_logger = std::make_unique<BT::FileLogger>(p_tree, log_name.c_str());
+
 	//std::cout << "Tree source updated. New tree:" << std::endl;
 	//printTreeRecursively(p_tree.rootNode());
 	//p_logger = std::make_unique<BT::StdCoutLogger>(p_tree);

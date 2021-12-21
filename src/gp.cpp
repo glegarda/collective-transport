@@ -24,7 +24,7 @@ struct EvoParams
 	unsigned int population = 5;
 	unsigned short min_max_depth = 1;
 	unsigned short max_max_depth = 5;
-	unsigned short n_evals = 2;
+	unsigned short n_evals = 1;
 	// Make sure mutation rate is set to 1.0 in main()
 	float p_inner = 0.9;
 	float p_mut_param = 0.05;
@@ -961,6 +961,14 @@ void SO_report_generation(
 		<< "Exe time = " << last_generation.exe_time
 		<< std::endl;
 
+	// Compute average BT size of the generation
+	unsigned int sum_size = 0;
+	for (const auto& c : last_generation.chromosomes)
+	{
+		sum_size += c.genes.tree.size();
+	}
+	float average_size = static_cast<float>(sum_size) / last_generation.chromosomes.size();
+
 	output_file
 		<< "==================================================\n"
 		<< "Generation [" << generation_number << "]\n"
@@ -968,6 +976,7 @@ void SO_report_generation(
 		<< "Average = " << last_generation.average_cost << "\n"
 		<< "Exe time = " << last_generation.exe_time << "\n"
 		<< "Best size = " << best_genes.tree.size() << "\n"
+		<< "Average size = " << average_size << "\n"
 		<< "--------------------------------------------------\n"
 		<< printTree(best_genes, "MainTree") << "\n";
 	

@@ -58,14 +58,11 @@ class Movcs : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{pvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<int> s = getInput<int>("arg1");
@@ -117,14 +114,11 @@ class Movcv : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{vvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<int> a = getInput<int>("arg1");
@@ -177,14 +171,11 @@ class Movpv : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{vvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<VectorPolar> s1 = getInput<VectorPolar>("arg1");
@@ -248,14 +239,11 @@ class Mulas : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{pvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<float> s1 = getInput<float>("arg1");
@@ -321,14 +309,11 @@ class Mulav : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{vvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<VectorPolar> s1 = getInput<VectorPolar>("arg1");
@@ -394,14 +379,11 @@ class Rotav : public CoroActionNode
 			auto entry = config.output_ports.find("arg0");
 			if (entry->second == "{vvote}")
 			{
-				if (*(_voted.get()))
+				while (*(_voted.get()))
 				{
 					setStatusRunningAndYield();
 				}
-				else
-				{
-					*(_voted.get()) = true;
-				}
+				*(_voted.get()) = true;
 			}
 
 			Optional<VectorPolar> s1 = getInput<VectorPolar>("arg1");

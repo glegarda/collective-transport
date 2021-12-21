@@ -5,6 +5,7 @@
 #include "common.h"
 #include <behaviortree_cpp_v3/bt_factory.h>
 #include <behaviortree_cpp_v3/loggers/bt_cout_logger.h>
+#include <behaviortree_cpp_v3/loggers/bt_file_logger.h>
 
 class Controller
 {
@@ -25,7 +26,7 @@ class Controller
 	private:
 		BT::BehaviorTreeFactory p_factory;
 		BT::Tree p_tree;
-		std::unique_ptr<BT::StdCoutLogger> p_logger;
+		std::unique_ptr<BT::FileLogger> p_logger;
 };
 
 
