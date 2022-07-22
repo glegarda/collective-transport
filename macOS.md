@@ -1,13 +1,8 @@
-
-### Building on OSX
-
-mkdir simulation
-cd simulation
+### Building on macOS
 
 git clone https://github.com/glegarda/collective-transport.git
 git clone https://github.com/erincatto/box2d.git
 git clone https://github.com/BehaviorTree/BehaviorTree.CPP.git
-
 
 cd box2d
 mkdir build; cd build
